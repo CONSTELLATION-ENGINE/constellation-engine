@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Discussions
+    url: https://github.com/devinrory-collab/constellation-engine/discussions
+    about: For open-ended chat, ideas, or showing off what your agent has become.
