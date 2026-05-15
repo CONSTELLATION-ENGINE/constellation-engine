@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Constellation</title>
+<style>
+  body {
+    margin: 0;
+    background: #0b0e1a;
+    color: #d8e0f0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    user-select: none;
+    padding: 24px;
+    text-align: center;
+    box-sizing: border-box;
+  }
+  h1 {
+    font-size: 28px;
+    font-weight: 300;
+    letter-spacing: 0.4em;
+    margin: 0 0 24px 0;
+    color: #f5c542;
+    text-shadow: 0 0 18px rgba(245, 197, 66, 0.32);
+  }
+  .glyph {
+    width: 64px;
+    height: 64px;
+    border: 2px solid #f5c542;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 1.4s linear infinite;
+    margin-bottom: 32px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .status {
+    font-size: 13px;
+    color: #8ea0c0;
+    max-width: 380px;
+    line-height: 1.55;
+    word-break: break-word;
+  }
+  .status.error {
+    color: #ff6b6b;
+  }
+  .recovery {
+    margin-top: 20px;
+    display: block;
+    opacity: 0.55;
+    transition: opacity 0.4s ease;
+  }
+  .recovery.show {
+    display: block;
+    opacity: 1;
+  }
+  .recovery:hover { opacity: 1; }
+  .recovery button {
+    background: transparent;
+    border: 1px solid #5c6c8e;
+    color: #d8e0f0;
+    padding: 8px 18px;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .recovery button:hover {
+    border-color: #f5c542;
+    color: #f5c542;
+  }
+  .recovery .hint {
+    font-size: 11px;
+    color: #5c6c8e;
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+<div class="glyph" id="glyph"></div>
+<h1>CONSTELLATION</h1>
+<div class="status" id="status">Booting engine…</div>
+<div class="recovery" id="recovery">
+  <button id="reset-btn">Reset &amp; restart wizard</button>
+  <div class="hint">Stops the engine, clears the onboarding sentinel, re-opens the wizard. API keys stay saved.</div>
+</div>
+
+<script>
+  const statusEl = document.getElementById('status');
+  const recoveryEl = document.getElementById('recovery');
+  const glyphEl = document.getElementById('glyph');
+
+  function showError(message) {
+    statusEl.textContent = String(message || 'Unknown error');
+    statusEl.classList.add('error');
+    glyphEl.style.animation = 'none';
+    glyphEl.style.borderColor = '#ff6b6b';
+    glyphEl.style.borderTopColor = '#ff6b6b';
+    recoveryEl.classList.add('show');
+  }
+
+  // Primary IPC bridge (preload-exposed). Available in packaged builds.
+  if (window.splash && typeof window.splash.onError === 'function') {
+    window.splash.onError(showError);
+  }
+
+  // Legacy / fallback path: if main posts via webContents.executeJavaScript or
+  // window.postMessage, accept it too. Defensive — keeps the splash usable
+  // even if the preload fails to load (e.g. signature mismatch).
+  window.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'error') {
+      showError(e.data.message);
+    }
+  });
+
+  document.getElementById('reset-btn').addEventListener('click', async () => {
+    if (!window.splash || typeof window.splash.resetSetup !== 'function') {
+      showError('Reset unavailable — please quit and relaunch the app.');
+      return;
+    }
+    try {
+      await window.splash.resetSetup();
+      // resetSetup triggers app.relaunch() in main; window unloads shortly.
+    } catch (err) {
+      showError('Reset failed: ' + (err && err.message ? err.message : String(err)));
+    }
+  });
+
+  // Watchdog: if no progress within 90s, surface a "stuck" recovery hint
+  // without flipping to red — engine boot has its own ready-timeout, but the
+  // splash only sees errors via splash:error, so a silent hang would never
+  // expose the Reset button.
+  setTimeout(() => {
+    if (!statusEl.classList.contains('error')) {
+      statusEl.textContent = 'Still booting… if this persists, you can reset.';
+      recoveryEl.classList.add('show');
+    }
+  }, 90000);
+</script>
+</body>
+</html>

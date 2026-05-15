@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Constellation Launcher</title>
+<style>
+  :root {
+    --bg: #0b0e1a;
+    --bg-card: #131a2c;
+    --bg-deep: #06080f;
+    --fg: #d8e0f0;
+    --fg-muted: #8ea0c0;
+    --accent: #7da3ff;
+    --brand-gold: #f5c542;
+    --ok: #6ed68a;
+    --warn: #f0c674;
+    --err: #ff6b6b;
+    --line: #1f2740;
+    --input-bg: #0e1424;
+    --input-border: #2c3556;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  header h1 {
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: 0.32em;
+    color: var(--brand-gold);
+    text-shadow: 0 0 18px rgba(245, 197, 66, 0.32);
+    margin: 0;
+  }
+  nav { display: flex; gap: 16px; margin-left: auto; }
+  nav a {
+    color: var(--fg-muted);
+    text-decoration: none;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  nav a:hover { color: var(--fg); }
+
+  main {
+    padding: 18px 24px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-height: 0;
+    max-width: 1100px;
+    width: 100%;
+    margin: 0 auto;
+  }
+  .card {
+    background: var(--bg-card);
+    border-radius: 8px;
+    padding: 16px 20px;
+  }
+  .card.flex { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+
+  .status-line { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--ok);
+    box-shadow: 0 0 8px var(--ok);
+  }
+  .dot.warn { background: var(--warn); box-shadow: 0 0 8px var(--warn); }
+  .dot.err  { background: var(--err);  box-shadow: 0 0 8px var(--err);  }
+
+  .btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  button {
+    background: var(--accent);
+    color: #0b0e1a;
+    border: 0;
+    padding: 9px 18px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  button:hover:not(:disabled) { filter: brightness(1.15); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.secondary {
+    background: transparent;
+    border: 1px solid var(--input-border);
+    color: var(--fg);
+  }
+  button.danger { background: #c9525a; color: #fff; }
+  button.small { padding: 5px 10px; font-size: 12px; }
+
+  .meta { color: var(--fg-muted); font-size: 12px; margin-top: 10px; }
+
+  /* Logs card */
+  .logs-head {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 8px; flex-wrap: wrap;
+  }
+  .logs-head strong { font-size: 13px; }
+  .logs-head .filler { flex: 1; }
+  .logs-head label.toggle {
+    font-size: 12px; color: var(--fg-muted); cursor: pointer;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .logs {
+    background: var(--bg-deep);
+    color: #c2cee8;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.65;
+    border-radius: 6px;
+    padding: 12px 14px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    flex: 1;
+    min-height: 200px;
+  }
+  .logs .marker {
+    color: var(--brand-gold);
+    font-weight: 600;
+  }
+
+  /* Update banner */
+  .update-card {
+    background: linear-gradient(135deg, rgba(125, 163, 255, 0.12), rgba(245, 197, 66, 0.10));
+    border: 1px solid rgba(125, 163, 255, 0.35);
+    display: none;
+  }
+  .update-card.show { display: block; }
+  .update-line { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .update-line strong { color: var(--brand-gold); }
+  .update-line .filler { flex: 1; }
+  .update-progress {
+    height: 4px;
+    background: var(--bg-deep);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 10px;
+    display: none;
+  }
+  .update-progress.show { display: block; }
+  .update-progress > div {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--brand-gold));
+    width: 0%;
+    transition: width 0.3s ease;
+  }
+  .update-status-msg {
+    font-size: 12px;
+    color: var(--fg-muted);
+    margin-top: 6px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    max-height: 120px;
+    overflow-y: auto;
+  }
+
+  /* Crash modal */
+  .modal-bg {
+    position: fixed; inset: 0;
+    background: rgba(6, 8, 15, 0.78);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 100;
+  }
+  .modal-bg.show { display: flex; }
+  .modal {
+    background: var(--bg-card);
+    border-radius: 10px;
+    padding: 22px 26px;
+    max-width: 540px;
+    width: 90%;
+    border-top: 3px solid var(--err);
+  }
+  .modal h2 {
+    margin: 0 0 8px;
+    font-size: 16px;
+    color: var(--err);
+  }
+  .modal p { color: var(--fg-muted); font-size: 13px; margin: 0 0 12px; }
+  .modal pre {
+    background: var(--bg-deep);
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 11px;
+    color: #aab7d4;
+    max-height: 180px;
+    overflow-y: auto;
+    margin: 0 0 14px;
+  }
+  .modal .btn-row { justify-content: flex-end; }
+</style>
+</head>
+<body>
+<header>
+  <h1>CONSTELLATION</h1>
+  <nav>
+    <a id="nav-open">Open Dashboard</a>
+    <a id="nav-open-folder" title="Show the engine data folder (constellation.db, config, logs).">Open Folder</a>
+    <a id="nav-save-log">Save Logs</a>
+    <a id="nav-check-update">Check for Updates</a>
+  </nav>
+</header>
+
+<main>
+  <div class="card update-card" id="update-card" data-last-status="idle">
+    <div class="update-line">
+      <strong id="update-headline">Update available</strong>
+      <span id="update-version" style="color:var(--fg-muted);font-size:12px;"></span>
+      <span class="filler"></span>
+      <button id="update-install" style="display:none;">Restart and Install</button>
+      <button class="secondary small" id="update-dismiss">Later</button>
+    </div>
+    <div class="update-progress" id="update-progress"><div id="update-progress-fill"></div></div>
+    <div class="update-status-msg" id="update-status-msg"></div>
+  </div>
+
+  <div class="card">
+    <div class="status-line">
+      <span class="dot" id="status-dot"></span>
+      <strong id="status-text">Engine running</strong>
+    </div>
+    <div class="btn-row">
+      <button id="open-dashboard">Open Dashboard</button>
+      <button class="secondary" id="copy-url">Copy URL</button>
+      <button class="secondary" id="btn-restart">Restart</button>
+      <button class="secondary" id="btn-stop">Stop</button>
+      <button class="secondary" id="btn-start" style="display:none;">Start</button>
+      <button class="secondary" id="btn-open-folder" title="Show the engine data folder (constellation.db, config, logs).">Open Folder</button>
+    </div>
+    <div class="meta" id="status-meta">PID — · Port — · Version —</div>
+  </div>
+
+  <div class="card flex">
+    <div class="logs-head">
+      <strong>Engine log</strong>
+      <span class="filler"></span>
+      <label class="toggle"><input type="checkbox" id="autoscroll" checked> Autoscroll</label>
+      <button class="secondary small" id="btn-copy-logs">Copy</button>
+      <button class="secondary small" id="btn-save-logs">Save</button>
+      <button class="secondary small" id="btn-clear-logs">Clear</button>
+    </div>
+    <div class="logs" id="log-stream"></div>
+  </div>
+
+</main>
+
+<!-- Crash modal -->
+<div class="modal-bg" id="crash-modal">
+  <div class="modal">
+    <h2>Engine stopped unexpectedly</h2>
+    <p id="crash-summary"></p>
+    <pre id="crash-tail"></pre>
+    <div class="btn-row">
+      <button class="secondary" id="crash-save">Save Logs</button>
+      <button class="secondary" id="crash-dismiss">Dismiss</button>
+      <button id="crash-restart">Restart Engine</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const el = (id) => document.getElementById(id);
+  const dot = el('status-dot'), text = el('status-text'), meta = el('status-meta');
+  const logs = el('log-stream'), autoscroll = el('autoscroll');
+  const btnRestart = el('btn-restart'), btnStop = el('btn-stop'), btnStart = el('btn-start');
+  const openBtn = el('open-dashboard'), copyBtn = el('copy-url'), navOpen = el('nav-open');
+  const navSaveLog = el('nav-save-log');
+  const crashModal = el('crash-modal'), crashSummary = el('crash-summary'), crashTail = el('crash-tail');
+
+  const params = new URLSearchParams(location.search);
+  let port = params.get('port') || '18800';
+  let dashUrl = `http://127.0.0.1:${port}/`;
+
+  function setRunning(running, status) {
+    if (running) {
+      dot.className = 'dot';
+      text.textContent = 'Engine running';
+      btnStop.style.display = '';
+      btnRestart.style.display = '';
+      btnStart.style.display = 'none';
+      openBtn.disabled = false;
+      const v = status?.version ? `v${status.version}` : 'v —';
+      meta.textContent = `PID ${status?.pid ?? '—'} · Port ${status?.port ?? port} · ${v}`;
+    } else {
+      dot.className = 'dot err';
+      text.textContent = 'Engine stopped';
+      btnStop.style.display = 'none';
+      btnRestart.style.display = '';
+      btnStart.style.display = '';
+      openBtn.disabled = true;
+      meta.textContent = `PID — · Port ${port} · v —`;
+    }
+  }
+
+  async function refresh() {
+    const s = await window.constellation.status();
+    if (s.port) { port = String(s.port); dashUrl = `http://127.0.0.1:${port}/`; }
+    if (s.ready) setRunning(true, s);
+    else setRunning(false, s);
+  }
+
+  // S10 — autoscroll only when user is already at the bottom + manual toggle.
+  function appendLog(line, isMarker) {
+    const atBottom = logs.scrollTop + logs.clientHeight >= logs.scrollHeight - 50;
+    if (isMarker) {
+      const span = document.createElement('span');
+      span.className = 'marker';
+      span.textContent = line + '\n';
+      logs.appendChild(span);
+    } else {
+      logs.appendChild(document.createTextNode(line + '\n'));
+    }
+    // Hard cap on retained nodes — protects renderer perf in chatty sessions.
+    while (logs.childNodes.length > 8000) logs.removeChild(logs.firstChild);
+    if (autoscroll.checked && atBottom) logs.scrollTop = logs.scrollHeight;
+  }
+
+  // Markers come through the same stream as regular log lines; detect by shape
+  // so the gold styling renders on engine.restart separators.
+  const MARKER_RE = /^─{4,}.*engine restart.*─{4,}$/;
+
+  window.constellation.onLog((line) => appendLog(line, MARKER_RE.test(line)));
+
+  window.constellation.logs({}).then(arr => {
+    for (const e of arr) appendLog(e.line, MARKER_RE.test(e.line));
+  });
+
+  // Lifecycle buttons
+  openBtn.onclick = navOpen.onclick = () => window.constellation.openDashboard();
+  copyBtn.onclick = () => { navigator.clipboard.writeText(dashUrl); copyBtn.textContent = 'Copied'; setTimeout(() => copyBtn.textContent = 'Copy URL', 1200); };
+
+  const openFolderHandler = async () => {
+    const r = await window.constellation.permissionOpenFolder();
+    if (!r?.ok) appendLog(`[launcher] open folder failed: ${r?.error || 'unknown'}`);
+  };
+  el('btn-open-folder').onclick = openFolderHandler;
+  el('nav-open-folder').onclick = openFolderHandler;
+
+  async function withBusy(btn, fn) {
+    const orig = btn.textContent;
+    btn.disabled = true; btn.textContent = '…';
+    try { return await fn(); }
+    finally { btn.disabled = false; btn.textContent = orig; }
+  }
+
+  btnRestart.onclick = () => withBusy(btnRestart, async () => {
+    const r = await window.constellation.engineRestart();
+    if (!r.ok) appendLog(`[launcher] restart failed: ${r.error}`);
+    refresh();
+  });
+  btnStop.onclick = () => withBusy(btnStop, async () => {
+    const r = await window.constellation.engineStop();
+    if (!r.ok) appendLog(`[launcher] stop failed: ${r.error}`);
+    refresh();
+  });
+  btnStart.onclick = () => withBusy(btnStart, async () => {
+    const r = await window.constellation.engineStart();
+    if (!r.ok) appendLog(`[launcher] start failed: ${r.error}`);
+    refresh();
+  });
+
+  // Log toolbar
+  el('btn-copy-logs').onclick = () => navigator.clipboard.writeText(logs.textContent);
+  el('btn-save-logs').onclick = navSaveLog.onclick = () => window.constellation.saveLog();
+  el('btn-clear-logs').onclick = () => { logs.textContent = ''; };
+
+  // S1 — Crash modal
+  window.constellation.onEngineCrashed((info) => {
+    crashSummary.textContent = `Exit code ${info.code ?? '?'}${info.signal ? ` (signal ${info.signal})` : ''}. The engine process terminated unexpectedly.`;
+    crashTail.textContent = info.tail || '(no recent log lines)';
+    crashModal.classList.add('show');
+    refresh();
+  });
+  el('crash-dismiss').onclick = () => crashModal.classList.remove('show');
+  el('crash-save').onclick = () => window.constellation.saveLog();
+  el('crash-restart').onclick = async () => {
+    crashModal.classList.remove('show');
+    await withBusy(btnRestart, () => window.constellation.engineRestart());
+    refresh();
+  };
+
+  refresh();
+  setInterval(refresh, 5000);
+
+  // ── Auto-update banner (Phase 2.2) ──
+  // Updater state machine: idle → checking → available → downloading → downloaded → install.
+  // Dismiss only hides the card for this session — next state event re-shows it.
+  const updateCard = el('update-card');
+  const updateHeadline = el('update-headline');
+  const updateVersion = el('update-version');
+  const updateInstall = el('update-install');
+  const updateDismiss = el('update-dismiss');
+  const updateProgress = el('update-progress');
+  const updateProgressFill = el('update-progress-fill');
+  const updateStatusMsg = el('update-status-msg');
+  const navCheckUpdate = el('nav-check-update');
+  let updateDismissedThisState = null;
+
+  function fmtBytes(n) {
+    if (!n) return '0 KB';
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+    return (n / 1024 / 1024).toFixed(1) + ' MB';
+  }
+
+  // Updater errors from electron-updater can include the full HTTP response
+  // (headers, set-cookie, body) when GitHub Releases returns 404 — that floods
+  // the banner. Collapse to a single short line for display.
+  function summarizeUpdateError(raw) {
+    if (!raw) return 'Unknown error';
+    const s = String(raw).replace(/\s+/g, ' ').trim();
+    if (/\b404\b/.test(s) || /not found/i.test(s)) {
+      return 'No releases published yet (HTTP 404).';
+    }
+    if (/ENOTFOUND|ECONNREFUSED|ETIMEDOUT|network/i.test(s)) {
+      return 'Network unreachable. Check your connection.';
+    }
+    return s.length > 140 ? s.slice(0, 140) + '…' : s;
+  }
+
+  function renderUpdateState(s) {
+    if (!s) return;
+    if (updateDismissedThisState === s.status) return;
+    if (s.status === 'idle' || s.status === 'not-available') {
+      updateCard.classList.remove('show');
+      return;
+    }
+    updateCard.classList.add('show');
+    updateCard.dataset.lastStatus = s.status;
+    updateVersion.textContent = s.version ? 'v' + s.version : '';
+    updateProgress.classList.remove('show');
+    updateInstall.style.display = 'none';
+    if (s.status === 'checking') {
+      updateHeadline.textContent = 'Checking for updates…';
+      updateStatusMsg.textContent = '';
+    } else if (s.status === 'available') {
+      updateHeadline.textContent = 'Update available — downloading…';
+      updateStatusMsg.textContent = 'You can keep working; we\'ll notify you when the install is ready.';
+    } else if (s.status === 'downloading') {
+      updateHeadline.textContent = 'Downloading update…';
+      updateProgress.classList.add('show');
+      const pct = (s.progress && s.progress.percent) || 0;
+      updateProgressFill.style.width = pct + '%';
+      const xfer = s.progress ? fmtBytes(s.progress.transferred) : '';
+      const total = s.progress ? fmtBytes(s.progress.total) : '';
+      const rate = s.progress && s.progress.bytesPerSecond ? fmtBytes(s.progress.bytesPerSecond) + '/s' : '';
+      updateStatusMsg.textContent = pct + '% · ' + xfer + ' / ' + total + (rate ? ' · ' + rate : '');
+    } else if (s.status === 'downloaded') {
+      updateHeadline.textContent = 'Update ready';
+      updateInstall.style.display = '';
+      updateStatusMsg.textContent = 'Restart Constellation to install. Your data and settings will be preserved.';
+    } else if (s.status === 'error') {
+      updateHeadline.textContent = 'Update check failed';
+      updateStatusMsg.textContent = summarizeUpdateError(s.error) + ' We\'ll try again later.';
+    }
+  }
+
+  if (window.constellation.updateGetState) {
+    window.constellation.updateGetState().then(renderUpdateState).catch(() => {});
+    window.constellation.onUpdateState((s) => { updateDismissedThisState = null; renderUpdateState(s); });
+  }
+
+  updateInstall.onclick = async () => {
+    updateInstall.disabled = true;
+    updateInstall.textContent = 'Restarting…';
+    try { await window.constellation.updateInstall(); } catch (e) {
+      updateInstall.disabled = false;
+      updateInstall.textContent = 'Restart and Install';
+    }
+  };
+
+  updateDismiss.onclick = () => {
+    updateDismissedThisState = updateCard.dataset.lastStatus || 'available';
+    updateCard.classList.remove('show');
+  };
+
+  navCheckUpdate.onclick = async () => {
+    if (!window.constellation.updateCheck) return;
+    const r = await window.constellation.updateCheck();
+    if (!r.ok) {
+      // Show a transient error in the banner area
+      updateCard.classList.add('show');
+      updateHeadline.textContent = 'Update check failed';
+      updateStatusMsg.textContent = summarizeUpdateError(r.error);
+      updateInstall.style.display = 'none';
+      updateProgress.classList.remove('show');
+    }
+  };
+</script>
+</body>
+</html>

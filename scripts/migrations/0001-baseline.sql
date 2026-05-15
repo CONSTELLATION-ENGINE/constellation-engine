@@ -1,0 +1,21 @@
+-- SPDX-License-Identifier: AGPL-3.0-or-later
+-- 0001-baseline.sql — Constellation Engine OSS v0.1.0 schema baseline.
+--
+-- The full v0.1.0 schema is defined in schema.sql (applied unconditionally on
+-- every boot, idempotent via CREATE ... IF NOT EXISTS). This file exists only
+-- so the migration chain has a contiguous sequence starting at 1; the runner
+-- stamps schema_version=1 after this file applies, and every subsequent
+-- migration ships as 0002-*.sql, 0003-*.sql, ...
+--
+-- Engineering rule (locked v0.1.0): never edit schema.sql in-place to add new
+-- columns/tables/triggers — write a new 000N migration instead. Old installs
+-- pick up the change via the migration chain; fresh installs apply schema.sql
+-- (now stale relative to head) plus all migrations and converge to the same
+-- end state. This keeps fresh-install + upgrade paths byte-identical.
+--
+-- The legacy `migrations` table (created by schema.sql, pre-stamped by
+-- migrations/oss-bootstrap.sql) is retained for v0.1.0 only — it is dead in
+-- the OSS engine and slated for removal in v0.3.0 (alongside the inline ALTERs
+-- still living in engine.cjs:_init).
+
+SELECT 1;  -- no-op: baseline is schema.sql; this file just registers v1

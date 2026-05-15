@@ -1,0 +1,191 @@
+{
+  "rules": [
+    {
+      "id": "telegram_chat_id",
+      "pattern": "\\b6483036166\\b",
+      "replace": "123456789",
+      "scope": ["**/*.{js,cjs,json,md,py,sh,sql}"],
+      "severity": "block",
+      "reason": "Personal Telegram chat ID"
+    },
+    {
+      "id": "personal_name_devin",
+      "pattern": "Agent Creator",
+      "replace": "Agent Creator",
+      "scope": ["**/*"],
+      "severity": "block",
+      "reason": "Author personal name"
+    },
+    {
+      "id": "author_email",
+      "pattern": "user@gmail\\.com",
+      "replace": "you@example.com",
+      "scope": ["**/*.{js,cjs,json,md,py,sh}"],
+      "severity": "block",
+      "reason": "Author email address — must run BEFORE personal_name_user so the email is replaced as a unit"
+    },
+    {
+      "id": "personal_name_user_disabled",
+      "pattern": "(?!a)b",
+      "replace": "",
+      "scope": [],
+      "severity": "warn",
+      "reason": "Disabled: pattern was 'user\\w*' which structurally always blocks (matches the literal word 'user' in normal code). Original intent was personal-name variants — covered by personal_name_devin and absolute_path_devin_home. Kept as no-op record so rule index stays stable."
+    },
+    {
+      "id": "timezone_auckland",
+      "pattern": "UTC",
+      "replace": "UTC",
+      "scope": ["**/*.{js,cjs,json,py,sh,md}"],
+      "severity": "warn",
+      "reason": "Personal timezone; should default to UTC in OSS (per plan §9 decision 1)"
+    },
+    {
+      "id": "agent_name_cortana_prompts",
+      "pattern": "Cortana",
+      "replace": "{{AGENT_NAME}}",
+      "scope": [
+        "**/*.template.md",
+        "**/*.prompt.md",
+        "**/*.prompt.txt",
+        "identity/**/*.md",
+        "identity/**/*.txt",
+        "README.md",
+        "CONTRIBUTING.md"
+      ],
+      "severity": "warn",
+      "reason": "Agent name — templated only in user-visible copy. Code identifiers (class names, require paths, DB enums like cortana_internal) MUST be preserved per plan §4.1 / §4.2"
+    },
+    {
+      "id": "chief_user",
+      "pattern": "\\bChief\\b",
+      "replace": "{{USER_NAME}}",
+      "scope": ["identity/**/*.md", "**/*.prompt.md", "**/*.template.md"],
+      "severity": "warn",
+      "reason": "User role reference — should be templated only in prompt/identity copy"
+    },
+    {
+      "id": "drive_folder_id_env",
+      "pattern": "(GOOGLE_DRIVE_FOLDER_ID\\s*[:=]\\s*[\"']?)([a-zA-Z0-9_-]{20,})",
+      "replace": "$1<GOOGLE_DRIVE_FOLDER_ID>",
+      "scope": [".env*", "**/*.env", "**/*.env.*", "config*.json", "scripts/**/*.{sh,py,cjs,js}"],
+      "severity": "block",
+      "reason": "Google Drive folder ID in env-var assignment context (avoids gobbling hex hashes / embedding cache keys)"
+    },
+    {
+      "id": "drive_folder_id_url",
+      "pattern": "(drive\\.google\\.com/(?:drive/)?folders/)([a-zA-Z0-9_-]{20,})",
+      "replace": "$1<GOOGLE_DRIVE_FOLDER_ID>",
+      "scope": ["**/*.{js,cjs,json,md,sh,py}"],
+      "severity": "block",
+      "reason": "Google Drive folder ID in URL context (Drive IDs are alphanumeric+_-, NOT hex; old [a-f0-9]{32} pattern was wrong AND gobbled MD5/embedding-cache keys)"
+    },
+    {
+      "id": "absolute_path_devin_home",
+      "pattern": "/home/devin(?=[/\"'\\s)\\]:,;]|$)",
+      "replace": "$HOME",
+      "scope": ["**/*.{js,cjs,mjs,json,md,sh,py,sql}"],
+      "severity": "block",
+      "reason": "Author's absolute home path leaks workstation layout — replace with $HOME (lookahead avoids gobbling adjacent identifier chars; mjs included for parity with HEADERABLE_EXT_RE)"
+    }
+  ],
+  "positive_assertions": [
+    {
+      "id": "sacred_star_map_owner",
+      "pattern": "STAR_MAP_OWNER\\s*=\\s*['\"]self['\"]",
+      "scope": ["src/user-identity.js"],
+      "reason": "Core identity constant must survive transform (plan §4.2)"
+    },
+    {
+      "id": "sacred_self_participant",
+      "pattern": "participant['\"]?\\s*[:=]\\s*['\"]self['\"]|participant['\"]?\\s*[:=]\\s*['\"]founder['\"]",
+      "scope": ["src/user-identity.js"],
+      "reason": "participant: 'self' / 'founder' enum must survive (plan §4.2)"
+    },
+    {
+      "id": "sacred_db_enum_founder_chat",
+      "pattern": "founder_chat",
+      "scope": ["src/conversation-store.js"],
+      "reason": "DB enum 'founder_chat' must survive — renaming this is what broke 04-24 (plan §4.2)"
+    },
+    {
+      "id": "sacred_db_enum_cortana_internal",
+      "pattern": "cortana_internal",
+      "scope": ["src/agent-runtime.js"],
+      "reason": "DB enum 'cortana_internal' must survive (plan §4.2)"
+    },
+    {
+      "id": "sacred_bitemporal_columns",
+      "pattern": "valid_from.*valid_to.*superseded_by|valid_from[\\s\\S]{0,200}superseded_by",
+      "scope": ["scripts/migrations/*phase1a*.sql"],
+      "reason": "SQL bi-temporal columns valid_from/valid_to/superseded_by must survive (plan §4.2)"
+    },
+    {
+      "id": "sacred_mimir_resolver",
+      "pattern": "MimirResolver",
+      "scope": ["src/mimir-resolver.js"],
+      "reason": "Mímir resolver class name must be preserved (plan §4.2)"
+    },
+    {
+      "id": "sacred_mimir_critic",
+      "pattern": "MimirPrecommitCritic",
+      "scope": ["src/mimir-precommit-critic.js"],
+      "reason": "Mímir critic class name must be preserved (plan §4.2)"
+    },
+    {
+      "id": "sacred_mimir_reconsolidation",
+      "pattern": "MimirReconsolidationQueue",
+      "scope": ["src/mimir-reconsolidation-queue.js"],
+      "reason": "Mímir reconsolidation class name must be preserved (plan §4.2)"
+    },
+    {
+      "id": "sacred_mimir_action_worker",
+      "pattern": "MimirActionWorker",
+      "scope": ["src/mimir-action-worker.js"],
+      "reason": "Mímir action worker class name must be preserved (plan §4.2)"
+    },
+    {
+      "id": "sacred_mimir_environmental_ir",
+      "pattern": "MimirEnvironmentalIR",
+      "scope": ["src/mimir-environmental-ir.js"],
+      "reason": "Mímir environmental IR class name must be preserved (plan §4.2)"
+    },
+    {
+      "id": "sacred_mimir_main_active_gate",
+      "pattern": "M[íi]mir main-active gate|shouldSuppress",
+      "scope": ["src/mimir-main-active-gate.js"],
+      "reason": "Mímir main-active gate identity must be preserved (header comment OR shouldSuppress export) (plan §4.2)"
+    },
+    {
+      "id": "sacred_fdir_prefix",
+      "pattern": "\"fdir\"",
+      "scope": ["config/node_taxonomy.json"],
+      "reason": "fdir- node-id prefix enum must be preserved — renaming this DB enum is what broke 04-24 (plan §4.2)"
+    },
+    {
+      "id": "agpl_header_present",
+      "pattern": "SPDX-License-Identifier:\\s*AGPL-3\\.0-or-later",
+      "scope": ["**/*.{js,cjs,mjs,py,sh,sql}"],
+      "reason": "Every shipped source file must carry the AGPL-3.0-or-later SPDX header (rendered in OSS folder only, never back-edited to main; plan §F / §9 decision 3)"
+    },
+    {
+      "id": "sacred_soul_core",
+      "pattern": "soul[-_]core",
+      "scope": [
+        "identity/SYSTEM_PREAMBLE.template.md",
+        "identity/ENGINE-GUIDE.md",
+        "identity/SETUP.md"
+      ],
+      "reason": "soul-core KC concept must be preserved in core identity docs (plan §4.2). Per-file scope, not glob, so unrelated identity .md files don't trigger false positives."
+    }
+  ],
+  "oss_only_paths": [
+    "constellation-engine-oss/electron/**",
+    "constellation-engine-oss/src/oss/**",
+    "constellation-engine-oss/LICENSE",
+    "constellation-engine-oss/README.md",
+    "constellation-engine-oss/CONTRIBUTING.md",
+    "constellation-engine-oss/.env.example.advanced",
+    "constellation-engine-oss/migrations/oss-bootstrap.sql"
+  ]
+}

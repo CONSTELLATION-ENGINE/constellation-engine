@@ -1,0 +1,12 @@
+{
+  "curiosity_enabled": false,
+  "curiosity_user_explicit": false,
+  "clean_shutdown": true,
+  "unclean_exits": [],
+  "v3_enabled_actions": [],
+  "v3_outreach_daily_cap": 3,
+  "v3_fetch_daily_cap": 5,
+  "v3_profile_daily_cap": 5,
+  "autonomy_free_exploration": true,
+  "autonomy_outreach_kill": false
+}

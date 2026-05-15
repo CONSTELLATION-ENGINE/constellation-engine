@@ -1,0 +1,129 @@
+{
+  "name": "constellation-launcher",
+  "productName": "Constellation",
+  "version": "0.3.0r23",
+  "description": "Electron launcher for Constellation Engine — single-instance, port-probing, structured-ready, IPC shutdown.",
+  "license": "AGPL-3.0-or-later",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:mac": "electron-builder --mac --dir",
+    "build:win": "electron-builder --win --dir",
+    "build:linux": "electron-builder --linux --dir",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win",
+    "dist:linux": "electron-builder --linux"
+  },
+  "devDependencies": {
+    "electron": "^32.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "dependencies": {
+    "electron-context-menu": "^4.1.2",
+    "electron-updater": "^6.8.3",
+    "tree-kill": "^1.2.2"
+  },
+  "build": {
+    "appId": "ai.constellation.engine",
+    "productName": "Constellation",
+    "copyright": "Copyright © 2026 Constellation Engine contributors. AGPL-3.0-or-later.",
+    "asar": true,
+    "directories": {
+      "output": "../dist/electron",
+      "buildResources": "build-resources"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "onboarding/**/*",
+      "views/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "..",
+        "to": "engine",
+        "filter": [
+          "src/**/*",
+          "scripts/**/*",
+          "scripts/migrations/**/*",
+          "engine.cjs",
+          "schema.sql",
+          "package.json",
+          "package-lock.json",
+          "config.example.json",
+          "prompts/**/*",
+          "migrations/**/*",
+          "identity/**/*",
+          "config/**/*",
+          "node_modules/**/*",
+          "LICENSE",
+          "README.md",
+          "PERMISSIONS.md",
+          "THIRD-PARTY-LICENSES.md",
+          "!**/.git/**",
+          "!**/data/**",
+          "!**/logs/**",
+          "!dist/**",
+          "!electron/**",
+          "!**/node_modules/.bin/**",
+          "!identity/*.template.md"
+        ]
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        {
+          "target": "zip",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "build-resources/icon.png",
+      "darkModeSupport": true,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "identity": null
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build-resources/icon.png",
+      "signAndEditExecutable": false
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build-resources/icon.png",
+      "category": "Development"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "devinrory-collab",
+        "repo": "constellation-engine",
+        "releaseType": "release"
+      }
+    ]
+  }
+}

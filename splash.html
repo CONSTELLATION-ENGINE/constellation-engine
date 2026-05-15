@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Constellation</title>
+<style>
+  body {
+    margin: 0;
+    background: #0b0e1a;
+    color: #d8e0f0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    user-select: none;
+  }
+  h1 {
+    font-size: 28px;
+    font-weight: 300;
+    letter-spacing: 0.4em;
+    margin: 0 0 24px 0;
+    color: #f5c542;
+    text-shadow: 0 0 18px rgba(245, 197, 66, 0.32);
+  }
+  .glyph {
+    width: 64px;
+    height: 64px;
+    border: 2px solid #f5c542;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 1.4s linear infinite;
+    margin-bottom: 32px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .status { font-size: 13px; color: #8ea0c0; }
+  .error { color: #ff6b6b; }
+</style>
+</head>
+<body>
+<div class="glyph"></div>
+<h1>CONSTELLATION</h1>
+<div class="status" id="status">Booting engine…</div>
+
+<script>
+  // Listen for splash:error from main process (sent if boot fails).
+  // (No preload — splash is intentionally minimal.)
+  // Render-process can use the API exposed via contextBridge if a preload is wired in;
+  // for now this script is here for future error display via window.message events.
+  window.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'error') {
+      const el = document.getElementById('status');
+      el.textContent = e.data.message;
+      el.classList.add('error');
+    }
+  });
+</script>
+</body>
+</html>

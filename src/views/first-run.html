@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Setup &middot; Constellation Engine</title>
+<style>
+  :root {
+    --bg:#0d1117; --panel:#161b22; --border:#30363d; --text:#c9d1d9;
+    --muted:#8b949e; --accent:#1a9fff; --gold:#ffd080;
+    --ok:#2ea043; --warn:#d29922; --danger:#f85149;
+    --card:#1c2229;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.5;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 16px}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wizard{width:100%;max-width:680px;background:var(--panel);border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,0.45);overflow:hidden}
+  .header{padding:20px 28px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .header h1{margin:0;font-size:18px;color:var(--accent);font-weight:700}
+  .header .step-badge{font-size:11px;color:var(--muted);font-family:Menlo,Monaco,monospace}
+  .body{padding:28px}
+  h2{margin:0 0 8px;font-size:22px;font-weight:700;color:var(--text)}
+  .lead{color:var(--muted);margin:0 0 20px;font-size:14px}
+  .footer{padding:16px 28px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .footer .hint{color:var(--muted);font-size:11px}
+  button{cursor:pointer;background:#21262d;color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 16px;font-size:13px;font-weight:500;transition:background .15s,border-color .15s}
+  button:hover{background:#30363d}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#0d1117;font-weight:600}
+  button.primary:hover:not(:disabled){background:#3fb6ff}
+  button.subtle{background:transparent;border-color:transparent;color:var(--muted)}
+  button.subtle:hover{color:var(--text);background:#21262d}
+  /* Tier cards */
+  .tiers{display:grid;grid-template-columns:1fr;gap:12px;margin-top:8px}
+  .tier{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:14px;transition:border-color .15s,background .15s}
+  .tier:hover{border-color:var(--accent);background:#1f2731}
+  .tier .meta{flex:1}
+  .tier .meta .name{font-weight:600;color:var(--text);font-size:15px}
+  .tier .meta .desc{color:var(--muted);font-size:12px;margin-top:2px}
+  .tier.disabled{opacity:.45;cursor:not-allowed}
+  .tier.disabled:hover{border-color:var(--border);background:var(--card)}
+  .tier .pill{font-size:10px;color:var(--muted);background:#21262d;padding:2px 8px;border-radius:10px;letter-spacing:.5px}
+  /* Provider cards */
+  .providers{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-top:8px}
+  .provider{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px;cursor:pointer;text-align:left;transition:border-color .15s,background .15s}
+  .provider:hover{border-color:var(--accent);background:#1f2731}
+  .provider.selected{border-color:var(--accent);background:#1f2731}
+  .provider .icon{font-size:22px;margin-bottom:4px}
+  .provider .name{font-weight:600;font-size:13px}
+  .provider .tag{font-size:10px;color:var(--muted);margin-top:2px}
+  /* Form */
+  .field{margin:14px 0}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600;letter-spacing:.3px;text-transform:uppercase}
+  .field input,.field select{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:9px 12px;font-size:13px;font-family:inherit}
+  .field input:focus,.field select:focus{outline:none;border-color:var(--accent)}
+  .field input[type=password]{font-family:Menlo,Monaco,monospace}
+  .field .help{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5}
+  .field .help a{color:var(--accent)}
+  .alert{padding:10px 14px;border-radius:6px;margin:12px 0;font-size:13px;line-height:1.5}
+  .alert.warn{background:#2d2410;color:#e3b341;border:1px solid #5c4a16}
+  .alert.err{background:#3d1a1a;color:#ff8a82;border:1px solid #5a1d1d}
+  .alert.ok{background:#0c2e1c;color:#79c98f;border:1px solid #1f5a35}
+  .alert.info{background:#0d2237;color:#7dc7ff;border:1px solid #1f3e5a}
+  /* Test result */
+  .test-row{display:flex;align-items:center;gap:10px;margin-top:14px;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:6px}
+  .test-row .dot{width:10px;height:10px;border-radius:50%;background:var(--muted);flex-shrink:0}
+  .test-row.ok .dot{background:var(--ok)}
+  .test-row.err .dot{background:var(--danger)}
+  .test-row.pending .dot{background:var(--warn);animation:pulse 1s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .test-row .text{flex:1;font-size:13px}
+  .test-row .lat{color:var(--muted);font-size:11px;font-family:Menlo,Monaco,monospace}
+  /* Spinner */
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid #30363d;border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:6px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  /* Model option badges */
+  .badge{display:inline-block;padding:1px 6px;border-radius:8px;font-size:10px;background:#21262d;color:var(--muted);margin-left:6px;font-family:Menlo,Monaco,monospace}
+  .badge.live{background:#0c2e1c;color:#79c98f}
+  .badge.bundled{background:#2d2410;color:#e3b341}
+  .badge.rec{background:#0d2237;color:#7dc7ff}
+  /* Provider scroll */
+  .provider .desc{font-size:11px;color:var(--muted);line-height:1.4;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wizard">
+  <div class="header">
+    <h1>🌌 Constellation Engine — Setup</h1>
+    <span class="step-badge" id="stepBadge">Step 1 / 6</span>
+  </div>
+  <div class="body" id="body"><!-- view --></div>
+  <div class="footer">
+    <button class="subtle" id="backBtn" onclick="goBack()" style="visibility:hidden">← Back</button>
+    <span class="hint">Set <code>CONSTELLATION_SKIP_FIRSTRUN=1</code> to skip wizard on headless deploys.</span>
+    <button class="primary" id="nextBtn" onclick="goNext()" disabled>Next →</button>
+  </div>
+</div>
+<script>
+'use strict';
+// Steam-launcher style first-run wizard. Walks the user from "no API key" to
+// "engine ready." Calls /api/providers/* for adapter metadata and /api/first-run/*
+// for backup detection / test connection / atomic save.
+
+// Single source of truth: the SPA's state machine.
+//
+// Slot model:
+//   Simple   → 1 slot: ['main+all']  (single provider/model broadcast to 6 roles).
+//   Advanced → 2 slots: ['main', 'others']  (Primary for main; Secondary for the
+//              other 5 roles: anamnesis, consolidation, worker, explore, compact).
+//   Expert   → 6 slots, one per role (main, anamnesis, consolidation, worker,
+//              explore, compact). Reuses the same wizard sub-flow per slot.
+//
+// Each slot owns its own provider card / credentials / model / test result;
+// Test step fans out and requires every UNIQUE (cardId, apiKey, baseUrl, model)
+// tuple to pass before advance.
+const state = {
+  step: 'welcome',         // welcome | tier | provider | credentials | model | test | done
+  tier: null,              // 'simple' | 'advanced' | 'expert'
+  slots: [],               // see makeSlot()
+  activeSlotIdx: 0,        // sub-step pointer for provider/credentials/model loops
+  alreadyConfigured: false,
+  busy: false,
+};
+
+function makeSlot(roleScope, label){
+  return {
+    roleScope: roleScope,    // 'main+all' | 'main' | 'others' | individual role id
+    label: label,            // human label shown in headers
+    providerCardId: null,
+    provider: null,
+    apiKey: '',
+    baseUrl: '',
+    model: '',
+    models: [],
+    liveError: null,
+    testOk: false,
+    testLatency: null,
+    testError: null,
+  };
+}
+
+function slotsForTier(tier){
+  if (tier === 'expert') {
+    return [
+      makeSlot('main',          'Main (chat)'),
+      makeSlot('anamnesis',     'Anamnesis (memory write)'),
+      makeSlot('consolidation', 'Consolidation (memory merge)'),
+      makeSlot('worker',        'Worker (sub-agents)'),
+      makeSlot('explore',       'Explore (autonomy)'),
+      makeSlot('compact',       'Compact (summarizer)'),
+    ];
+  }
+  if (tier === 'advanced') {
+    return [
+      makeSlot('main',   'Primary — chat'),
+      makeSlot('others', 'Secondary — memory + sub-agents'),
+    ];
+  }
+  return [makeSlot('main+all', 'All roles')];
+}
+
+function activeSlot(){ return state.slots[state.activeSlotIdx] || null; }
+
+// Legacy aliases — many render*/canAdvance/fetchModels/testConnection functions
+// already use state.provider/providerCardId/apiKey/.../model. Define accessors
+// that read+write the active slot, so Simple's existing path stays identical and
+// Advanced/Expert just bump activeSlotIdx between sub-flows.
+['providerCardId','provider','apiKey','baseUrl','model','testOk','testLatency','testError','liveError'].forEach(function(k){
+  Object.defineProperty(state, k, {
+    get: function(){ var s = activeSlot(); return s ? s[k] : (k === 'apiKey' || k === 'baseUrl' || k === 'model' ? '' : null); },
+    set: function(v){ var s = activeSlot(); if (s) s[k] = v; },
+  });
+});
+Object.defineProperty(state, 'models', {
+  get: function(){ var s = activeSlot(); return s ? s.models : []; },
+  set: function(v){ var s = activeSlot(); if (s) s.models = v; },
+});
+
+// Provider card definitions. id is the wizard-internal slug; providerId is the
+// adapter id (anthropic/openai/gemini/ollama). Custom uses the openai adapter
+// against an arbitrary base URL — typically a localhost OAuth bridge.
+const PROVIDER_CARDS = [
+  { id: 'anthropic-direct', providerId: 'anthropic', icon: '🔑', name: 'Anthropic Direct', tag: 'API key', envVar: 'ANTHROPIC_API_KEY',
+    desc: 'Pay-per-token via Anthropic console.', needsKey: true },
+  { id: 'openai', providerId: 'openai', icon: '💚', name: 'OpenAI', tag: 'API key', envVar: 'OPENAI_API_KEY',
+    desc: 'GPT-5 family. Pay-per-token via platform.openai.com.', needsKey: true },
+  { id: 'gemini', providerId: 'gemini', icon: '✨', name: 'Google Gemini', tag: 'API key', envVar: 'GEMINI_API_KEY',
+    desc: 'Free tier on aistudio.google.com for low-volume use.', needsKey: true },
+  { id: 'openrouter', providerId: 'openai', icon: '🛣️', name: 'OpenRouter', tag: 'API key', envVar: 'OPENROUTER_API_KEY',
+    desc: 'Aggregator for 200+ models. One key, many providers.', needsKey: true,
+    fixedBaseUrl: 'https://openrouter.ai/api/v1' },
+  { id: 'ollama', providerId: 'ollama', icon: '🦙', name: 'Ollama (local)', tag: 'No key', envVar: null,
+    desc: 'Runs models locally. Privacy-friendly, no API cost.', needsKey: false },
+  { id: 'custom', providerId: 'openai', icon: '🔧', name: 'Custom (OpenAI-compatible)', tag: 'Advanced', envVar: 'CUSTOM_OPENAI_API_KEY',
+    desc: 'Point at your own local bridge (advanced). Free-text URL + model.', needsKey: false, needsBaseUrl: true },
+];
+
+const $ = (id) => document.getElementById(id);
+const root = $('body');
+
+function setBusy(b){ state.busy = b; refreshFooter(); }
+
+function refreshFooter(){
+  const next = $('nextBtn'), back = $('backBtn');
+  back.style.visibility = (state.step === 'welcome') ? 'hidden' : 'visible';
+  next.disabled = !canAdvance() || state.busy;
+  next.textContent = (state.step === 'test' && allTestsOk()) ? 'Finish setup →' : 'Next →';
+  if (state.step === 'done') { next.style.display = 'none'; back.style.display='none'; }
+  const idx = ['welcome','tier','provider','credentials','model','test','done'].indexOf(state.step) + 1;
+  // Show "Step X / 6 · slot 1/2" suffix when in a multi-slot tier so user knows
+  // they're inside Primary's sub-flow, not done with credentials entirely.
+  let badge = (state.step === 'done') ? 'Done' : ('Step ' + idx + ' / 6');
+  const inSlotLoop = (state.step === 'provider' || state.step === 'credentials' || state.step === 'model');
+  if (inSlotLoop && state.slots.length > 1) {
+    badge += ' · slot ' + (state.activeSlotIdx + 1) + '/' + state.slots.length;
+  }
+  $('stepBadge').textContent = badge;
+}
+
+function allTestsOk(){
+  return state.slots.length > 0 && state.slots.every(function(s){ return !!s.testOk; });
+}
+
+function canAdvance(){
+  switch(state.step){
+    case 'welcome': return true;
+    case 'tier': return !!state.tier;
+    case 'provider': return !!state.provider;
+    case 'credentials': {
+      const card = PROVIDER_CARDS.find(c => c.id === state.providerCardId);
+      if (!card) return false;
+      if (card.needsKey && !state.apiKey.trim()) return false;
+      if (card.needsBaseUrl && !state.baseUrl.trim()) return false;
+      return true;
+    }
+    case 'model': return !!state.model;
+    case 'test': return allTestsOk();
+    case 'done': return false;
+    default: return false;
+  }
+}
+
+function setStep(step){
+  state.step = step;
+  render();
+}
+
+function goNext(){
+  switch(state.step){
+    case 'welcome': setStep('tier'); break;
+    case 'tier': state.activeSlotIdx = 0; setStep('provider'); break;
+    case 'provider': setStep('credentials'); break;
+    case 'credentials': {
+      // Custom card uses free-text model entry — skip the live /v1/models probe
+      // (most local OAuth bridges don't implement it).
+      const card = PROVIDER_CARDS.find(c => c.id === state.providerCardId);
+      if (card && card.id === 'custom') { setStep('model'); break; }
+      state.busy = true; setStep('model'); fetchModels(); break;
+    }
+    case 'model': {
+      // If more slots remain, loop back into provider for the next slot.
+      // Otherwise advance to the (multi-slot) test step.
+      if (state.activeSlotIdx < state.slots.length - 1) {
+        state.activeSlotIdx += 1;
+        setStep('provider');
+      } else {
+        setStep('test');
+      }
+      break;
+    }
+    case 'test': finish(); break;
+  }
+}
+function goBack(){
+  const order = ['welcome','tier','provider','credentials','model','test'];
+  // From test, we always return to the LAST slot's model picker.
+  if (state.step === 'test') {
+    state.activeSlotIdx = state.slots.length - 1;
+    state.slots.forEach(function(s){ s.testOk = false; s.testError = null; });
+    setStep('model');
+    return;
+  }
+  // From provider step of slot N>0, back returns to the previous slot's model.
+  if (state.step === 'provider' && state.activeSlotIdx > 0) {
+    state.activeSlotIdx -= 1;
+    setStep('model');
+    return;
+  }
+  // Within a single slot's flow, walk back one wizard step.
+  const i = order.indexOf(state.step);
+  if (i > 0) {
+    var slot = activeSlot(); if (slot) { slot.testOk = false; slot.testError = null; }
+    setStep(order[i - 1]);
+  }
+}
+
+function render(){
+  switch(state.step){
+    case 'welcome': renderWelcome(); break;
+    case 'tier': renderTier(); break;
+    case 'provider': renderProvider(); break;
+    case 'credentials': renderCredentials(); break;
+    case 'model': renderModel(); break;
+    case 'test': renderTest(); break;
+    case 'done': renderDone(); break;
+  }
+  refreshFooter();
+}
+
+function renderWelcome(){
+  let extra = '';
+  if (state.alreadyConfigured) {
+    extra = '<div class="alert info">Looks like you already have a Constellation setup. ' +
+      'Pick <strong>Skip wizard</strong> to keep your existing config, or <strong>Re-run wizard</strong> ' +
+      'to walk through setup fresh (your existing config will be overwritten when you save).</div>' +
+      '<div style="display:flex;gap:8px;margin-top:14px"><button onclick="skipWizard()">Skip wizard, just continue</button>' +
+      '<button class="primary" onclick="setStep(\'tier\')">Re-run wizard →</button></div>';
+  }
+  root.innerHTML =
+    '<h2>Welcome.</h2>' +
+    '<p class="lead">An AI companion with a memory you can see. This wizard takes about a minute and asks for one thing: an API key (or a local Ollama instance).</p>' +
+    '<div class="alert info">No data leaves your machine except for the AI provider you choose. The engine runs entirely on this computer.</div>' +
+    extra;
+}
+
+function renderTier(){
+  const mkTier = (id, name, desc) => {
+    const cls = 'tier' + (state.tier === id ? ' selected' : '');
+    return '<div class="' + cls + '" onclick="pickTier(\'' + id + '\')"><div class="meta"><div class="name">' +
+      name + '</div><div class="desc">' + desc + '</div></div></div>';
+  };
+  root.innerHTML =
+    '<h2>How would you like to set up your AI?</h2>' +
+    '<p class="lead">All three modes can be reconfigured later in Settings → LLM Roles. Pick what feels right for now.</p>' +
+    '<div class="tiers">' +
+      mkTier('simple', 'Simple', 'One model runs everything. Easiest to get started.') +
+      mkTier('advanced', 'Advanced', 'Two models: a smart "Primary" for chat + a fast "Secondary" for memory and sub-agents. Cheaper at scale, more nuanced.') +
+      mkTier('expert', 'Expert', 'Pick a model per role (6 roles: main, anamnesis, consolidation, worker, explore, compact). Maximum control.') +
+    '</div>' +
+    '<div class="alert info" style="margin-top:14px">Same provider across roles works best (e.g. one provider\'s balanced + fast tiers). Cross-vendor multi-role (e.g. one provider for chat + another for memory) is supported but requires both providers\' API keys to be set; some routing edge cases are still being polished.</div>';
+}
+
+function pickTier(id){
+  state.tier = id;
+  // Reset slot array and pointer whenever the tier changes — prevents stale
+  // Advanced slots from leaking into a re-selected Simple flow.
+  state.slots = slotsForTier(id);
+  state.activeSlotIdx = 0;
+  render();
+}
+
+function slotLabel(){
+  const slot = activeSlot();
+  if (!slot || state.slots.length <= 1) return '';
+  return ' — ' + escHtml(slot.label);
+}
+
+function renderProvider(){
+  const cards = PROVIDER_CARDS.map(c => {
+    const cls = 'provider' + (state.providerCardId === c.id ? ' selected' : '');
+    return '<div class="' + cls + '" onclick="pickProvider(\'' + c.id + '\')">' +
+      '<div class="icon">' + c.icon + '</div>' +
+      '<div class="name">' + c.name + ' <span class="badge">' + c.tag + '</span></div>' +
+      '<div class="desc">' + c.desc + '</div></div>';
+  }).join('');
+  let copyBtn = '';
+  // Convenience: "Copy from Main" copies the first slot's complete config to
+  // the active slot. Saves typing for the common "two tiers, same provider key" case.
+  if (state.activeSlotIdx > 0 && state.slots[0] && state.slots[0].providerCardId) {
+    copyBtn = '<button class="subtle" style="margin-top:8px" onclick="copyFromMain()">Copy provider + key from Main</button>';
+  }
+  root.innerHTML =
+    '<h2>Pick a provider' + slotLabel() + '.</h2>' +
+    '<p class="lead">' + (state.activeSlotIdx === 0
+      ? 'All providers can be added or replaced later in Settings &rarr; LLM Roles.'
+      : 'Choose a different provider or reuse the Primary one with a cheaper model.') +
+    '</p>' +
+    '<div class="providers">' + cards + '</div>' + copyBtn;
+}
+
+function copyFromMain(){
+  const main = state.slots[0];
+  const slot = activeSlot();
+  if (!main || !slot) return;
+  slot.providerCardId   = main.providerCardId;
+  slot.provider         = main.provider;
+  slot.apiKey           = main.apiKey;
+  slot.baseUrl          = main.baseUrl;
+  // Don't copy model — user should pick a different (cheaper) model for Secondary.
+  slot.model = '';
+  slot.models = [];
+  render();
+}
+
+function pickProvider(cardId){
+  const card = PROVIDER_CARDS.find(c => c.id === cardId);
+  if (!card) return;
+  state.providerCardId = cardId;
+  state.provider = card.providerId;
+  state.apiKey = '';
+  if (card.providerId === 'ollama') state.baseUrl = 'http://127.0.0.1:11434/v1';
+  else if (card.fixedBaseUrl) state.baseUrl = card.fixedBaseUrl;
+  else state.baseUrl = '';
+  state.model = '';
+  state.models = [];
+  render();
+}
+
+function renderCredentials(){
+  const card = PROVIDER_CARDS.find(c => c.id === state.providerCardId);
+  if (!card) return setStep('provider');
+  let html = '<h2>Connect ' + escHtml(card.name) + slotLabel() + '.</h2>';
+  html += '<p class="lead">' + escHtml(card.desc) + '</p>';
+  if (card.providerId === 'ollama') {
+    html +=
+      '<div class="field"><label>Ollama base URL</label>' +
+      '<input type="text" id="baseUrlInput" value="' + escHtml(state.baseUrl) + '" oninput="state.baseUrl=this.value;refreshFooter()">' +
+      '<div class="help">Ollama runs locally; default is <code>http://127.0.0.1:11434/v1</code>. ' +
+      'Install: <a href="https://ollama.com/download" target="_blank" rel="noopener">ollama.com/download</a>. ' +
+      'Pull a model: <code>ollama pull llama3.3</code>.</div></div>';
+    // No API key needed for Ollama
+    state.apiKey = ''; // reset just in case
+  } else if (card.id === 'custom') {
+    html +=
+      '<div class="field"><label>Base URL</label>' +
+      '<input type="text" id="baseUrlInput" value="' + escHtml(state.baseUrl) + '" placeholder="http://127.0.0.1:3456/v1" oninput="state.baseUrl=this.value;refreshFooter()" autofocus>' +
+      '<div class="help">Full URL including <code>/v1</code> path. Typical local bridges: <code>http://127.0.0.1:3456/v1</code>, <code>http://127.0.0.1:8080/v1</code>.</div></div>' +
+      '<div class="field"><label>API Key (optional)</label>' +
+      '<input type="password" id="apiKeyInput" value="' + escHtml(state.apiKey) + '" placeholder="leave blank for local bridges" oninput="state.apiKey=this.value;refreshFooter()">' +
+      '<div class="help">Custom endpoints connect to whatever URL you provide — typically a local bridge that forwards requests to a service you have a subscription with. ' +
+      'You are responsible for the bridge\'s terms of service and any account consequences. We do not endorse or recommend any specific bridge software. ' +
+      'For unlisted cloud providers (DeepSeek, Grok, Mistral, etc.), use OpenRouter instead.</div></div>';
+  } else {
+    const setupHints = {
+      'anthropic-direct': { url:'https://console.anthropic.com/settings/keys', hint:'Anthropic keys start with sk-ant-api / sk-ant-oat / sk-ant-admin.' },
+      'openai': { url:'https://platform.openai.com/api-keys', hint:'OpenAI keys start with sk- or sk-proj-.' },
+      'gemini': { url:'https://aistudio.google.com/apikey', hint:'Google AI Studio API key (free tier available).' },
+      'openrouter': { url:'https://openrouter.ai/keys', hint:'OpenRouter keys start with sk-or-.' },
+    }[state.providerCardId] || { url:'', hint:'' };
+    html +=
+      '<div class="field"><label>API Key</label>' +
+      '<input type="password" id="apiKeyInput" value="' + escHtml(state.apiKey) + '" placeholder="paste your API key" oninput="state.apiKey=this.value;refreshFooter()" autofocus>' +
+      '<div class="help">Get a key at <a href="' + escHtml(setupHints.url) + '" target="_blank" rel="noopener">' + escHtml(setupHints.url) + '</a>. ' + escHtml(setupHints.hint) + ' The key is written to <code>.env</code> with mode 0600 — it never leaves this machine.</div></div>';
+  }
+  root.innerHTML = html;
+}
+
+function renderModel(){
+  const card = PROVIDER_CARDS.find(c => c.id === state.providerCardId);
+  if (!card) return setStep('provider');
+  let html = '<h2>Pick a model' + slotLabel() + '.</h2>';
+  let leadCopy;
+  if (state.tier === 'simple') {
+    leadCopy = 'All 6 internal roles will use this model. You can split per-role later in Settings &rarr; LLM Roles.';
+  } else if (state.tier === 'advanced') {
+    const slot = activeSlot();
+    leadCopy = slot && slot.roleScope === 'main'
+      ? 'Used for the Main chat role only. Pick the smartest/largest model you\'re comfortable paying for.'
+      : 'Used for memory writes (Anamnesis), consolidation, sub-agents, autonomy, and summarization. Pick a fast/cheap model — it runs frequently in the background.';
+  } else {
+    leadCopy = 'Used for the <strong>' + escHtml(activeSlot().roleScope) + '</strong> role only. Other roles get their own model on the next slots.';
+  }
+  html += '<p class="lead">' + leadCopy + '</p>';
+  if (card.id === 'custom') {
+    html +=
+      '<div class="field"><label>Model name</label>' +
+      '<input type="text" id="modelInput" value="' + escHtml(state.model || '') + '" placeholder="model-id-from-your-bridge" oninput="state.model=this.value;refreshFooter()" autofocus>' +
+      '<div class="help">Free-text — enter exactly what your bridge accepts (any provider/model id string).</div></div>';
+    root.innerHTML = html;
+    return;
+  }
+  if (state.busy) {
+    html += '<div class="alert info"><span class="spinner"></span>Fetching live models from ' + escHtml(card.name) + '…</div>';
+  } else if (!state.models.length) {
+    html += '<div class="alert err">No models available. <button onclick="fetchModels()">Retry</button></div>';
+  } else {
+    let liveLabel = '';
+    if (state.liveError) liveLabel = '<div class="alert warn">Live <code>/v1/models</code> fetch failed (<em>' + escHtml(state.liveError) + '</em>). Falling back to bundled list — model names may be stale.</div>';
+    const opts = state.models.map(m => {
+      const sourceLabel = m.source === 'live' ? '(live)' : '(bundled)';
+      const tierLabel = m.tier === 'recommended' ? ' — recommended' : '';
+      return '<option value="' + escHtml(m.id) + '"' + (state.model === m.id ? ' selected' : '') + '>' +
+        escHtml(m.label || m.id) + ' ' + sourceLabel + tierLabel + '</option>';
+    }).join('');
+    html += liveLabel +
+      '<div class="field"><label>Model</label>' +
+      '<select id="modelSelect" onchange="state.model=this.value;refreshFooter()">' +
+        '<option value="" disabled' + (state.model ? '' : ' selected') + '>Choose a model…</option>' + opts +
+      '</select>' +
+      '<div class="help">Recommended model is pre-selected when available. Live entries come straight from the provider; bundled is the fallback list.</div></div>';
+  }
+  root.innerHTML = html;
+}
+
+function renderTest(){
+  let html = '<h2>Test the connection' + (state.slots.length > 1 ? 's' : '') + '.</h2>';
+  html += '<p class="lead">A 1-token round-trip per unique slot. This costs about <strong>$0.0005</strong> per metered slot and nothing on Ollama.</p>';
+  // One test-row per slot (Simple → 1 row; Advanced → 2; Expert → up to 6).
+  html += state.slots.map(function(s, i){
+    let cls = 'test-row';
+    let txt;
+    if (state.busy && !s.testOk && !s.testError) {
+      cls += ' pending';
+      txt = 'Testing…';
+    } else if (s.testOk) {
+      cls += ' ok';
+      txt = (state.slots.length > 1 ? escHtml(s.label) + ': ' : '') + 'Connection succeeded.';
+    } else if (s.testError) {
+      cls += ' err';
+      txt = (state.slots.length > 1 ? escHtml(s.label) + ': ' : '') + escHtml(s.testError);
+    } else {
+      txt = (state.slots.length > 1 ? escHtml(s.label) + ' (' + escHtml(s.model) + ')' : 'Click Test connection to validate ' + escHtml(s.model) + '.');
+    }
+    const lat = s.testOk && s.testLatency != null ? '<span class="lat">' + s.testLatency + ' ms</span>' : '';
+    return '<div class="' + cls + '"><span class="dot"></span><span class="text">' + txt + '</span>' + lat + '</div>';
+  }).join('');
+  html += '<div style="margin-top:14px"><button onclick="testAllSlots()" ' + (state.busy ? 'disabled' : '') + '>Test connection' + (state.slots.length > 1 ? 's' : '') + '</button></div>';
+  root.innerHTML = html;
+}
+
+function renderDone(){
+  let summary;
+  if (state.tier === 'simple') {
+    const s = state.slots[0];
+    summary = 'Provider: <strong>' + escHtml(s.providerCardId) + '</strong> · Model: <strong>' + escHtml(s.model) + '</strong> · all 6 roles';
+  } else {
+    summary = state.slots.map(function(s){
+      return escHtml(s.label) + ': <strong>' + escHtml(s.providerCardId) + '</strong> / ' + escHtml(s.model);
+    }).join('<br>');
+  }
+  root.innerHTML =
+    '<h2>You\'re ready.</h2>' +
+    '<p class="lead">Configuration written. Redirecting to the Dashboard…</p>' +
+    '<div class="alert ok">' + summary + '</div>';
+  setTimeout(() => { location.href = '/'; }, 1200);
+}
+
+async function fetchModels(){
+  const card = PROVIDER_CARDS.find(c => c.id === state.providerCardId);
+  if (!card) return;
+  setBusy(true);
+  state.models = [];
+  state.liveError = null;
+  try {
+    const body = { provider: card.providerId };
+    if (state.apiKey && card.providerId !== 'ollama') body.apiKey = state.apiKey;
+    if (state.baseUrl) body.baseUrl = state.baseUrl;
+    const resp = await fetch('/api/providers/live-models', {
+      method: 'POST', headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || ('HTTP ' + resp.status));
+    state.models = Array.isArray(data.models) ? data.models : [];
+    if (data.live_error) state.liveError = data.live_error;
+    // Auto-pick the recommended bundled model if the user hasn't chosen yet.
+    if (!state.model) {
+      const rec = state.models.find(m => m.tier === 'recommended') || state.models[0];
+      if (rec) state.model = rec.id;
+    }
+  } catch (e) {
+    state.liveError = e.message;
+  } finally {
+    setBusy(false);
+    render();
+  }
+}
+
+async function testOneSlot(slot){
+  const card = PROVIDER_CARDS.find(c => c.id === slot.providerCardId);
+  if (!card) { slot.testError = 'no provider card'; return; }
+  // Custom (OAuth-bridge) card: openai adapter requires a non-empty Authorization
+  // header value. Substitute a 'local' sentinel when user left the field blank,
+  // mirroring how the ollama card uses 'ollama' as its sentinel.
+  const apiKey = slot.apiKey || (card.id === 'custom' ? 'local' : null);
+  const body = {
+    provider: card.providerId,
+    model: slot.model,
+    apiKey,
+    baseUrl: slot.baseUrl || null,
+  };
+  try {
+    const resp = await fetch('/api/first-run/test-connection', {
+      method: 'POST', headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      slot.testOk = true;
+      slot.testLatency = data.latencyMs ?? null;
+      slot.testError = null;
+    } else {
+      slot.testOk = false;
+      slot.testError = (data.error || 'Test failed') + (data.hint ? ' — ' + data.hint : '');
+    }
+  } catch (e) {
+    slot.testOk = false;
+    slot.testError = e.message;
+  }
+}
+
+async function testAllSlots(){
+  setBusy(true);
+  state.slots.forEach(function(s){ s.testOk = false; s.testLatency = null; s.testError = null; });
+  render();
+  // Dedupe by (cardId, apiKey, baseUrl, model) — same tuple
+  // tested once but result mirrored to every slot that shares it.
+  const buckets = new Map();
+  state.slots.forEach(function(s){
+    const key = [s.providerCardId, s.apiKey, s.baseUrl, s.model].join('||');
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(s);
+  });
+  const repSlots = [];
+  buckets.forEach(function(group){ repSlots.push(group[0]); });
+  await Promise.all(repSlots.map(function(s){ return testOneSlot(s); }));
+  // Mirror representative result to all slots in its bucket.
+  buckets.forEach(function(group){
+    const rep = group[0];
+    group.slice(1).forEach(function(s){
+      s.testOk = rep.testOk;
+      s.testLatency = rep.testLatency;
+      s.testError = rep.testError;
+    });
+  });
+  setBusy(false);
+  render();
+}
+
+function expandSlotsToRoles(){
+  // Return {roleId → slot reference} so save-config can build per-role payload.
+  // Order of writes matches the canonical 6 roles. Slots with shared scope
+  // ('main+all' for Simple, 'others' for Advanced) fan out to multiple roles.
+  const ROLE_IDS = ['main','anamnesis','consolidation','worker','explore','compact'];
+  const map = {};
+  if (state.tier === 'simple') {
+    ROLE_IDS.forEach(function(r){ map[r] = state.slots[0]; });
+  } else if (state.tier === 'advanced') {
+    map.main = state.slots[0];
+    ['anamnesis','consolidation','worker','explore','compact'].forEach(function(r){ map[r] = state.slots[1]; });
+  } else {
+    state.slots.forEach(function(s){ map[s.roleScope] = s; });
+  }
+  return map;
+}
+
+async function finish(){
+  setBusy(true);
+  try {
+    const roleMap = expandSlotsToRoles();
+    const ROLE_IDS = ['main','anamnesis','consolidation','worker','explore','compact'];
+    const roles = {};
+    ROLE_IDS.forEach(function(roleId){
+      const slot = roleMap[roleId];
+      const card = PROVIDER_CARDS.find(c => c.id === slot.providerCardId);
+      // Custom-card sentinel mirrors the test-connection path so the .env entry
+      // is non-empty (openai adapter rejects blank Bearer tokens).
+      const apiKey = slot.apiKey || (card.id === 'custom' ? 'local' : null);
+      roles[roleId] = {
+        providerCardId: slot.providerCardId,
+        provider: card.providerId,
+        model: slot.model,
+        apiKey,
+        baseUrl: slot.baseUrl || null,
+      };
+    });
+    const body = { tier: state.tier, roles: roles };
+    const resp = await fetch('/api/first-run/save-config', {
+      method: 'POST', headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.ok) throw new Error(data.error || ('save failed: HTTP ' + resp.status));
+    setStep('done');
+  } catch (e) {
+    // Surface the save error on the test step (which is where Finish was clicked).
+    const slot0 = state.slots[0]; if (slot0) { slot0.testError = 'Save failed: ' + e.message; slot0.testOk = false; }
+    setStep('test');
+  } finally {
+    setBusy(false);
+  }
+}
+
+async function skipWizard(){
+  setBusy(true);
+  try {
+    await fetch('/api/first-run/complete', {
+      method: 'POST', headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify({ source: 'wizard-skip-existing-config' }),
+    });
+    location.href = '/';
+  } catch (e) {
+    alert('Skip failed: ' + e.message);
+  } finally {
+    setBusy(false);
+  }
+}
+
+function escHtml(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// Boot: detect existing config so backup-restored users get the skip option.
+async function boot(){
+  try {
+    const resp = await fetch('/api/first-run/backup-detection');
+    if (resp.ok) {
+      const data = await resp.json();
+      state.alreadyConfigured = !!data.already_configured;
+    }
+  } catch {}
+  render();
+}
+boot();
+</script>
+</body>
+</html>

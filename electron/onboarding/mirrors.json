@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "_note": "Sequential failover manifest per Planning MD §22.7. Mirrors are tried in order. SHA-256 fields are content-addressed against the canonical HuggingFace blobs. If HuggingFace rotates a file, recompute and re-release.",
+  "components": {
+    "bge-m3": {
+      "displayName": "BGE-M3 (semantic embedding model)",
+      "destDir": "models/bge-m3",
+      "approxBytes": 2300000000,
+      "files": [
+        { "path": "config.json",                       "sha256": "26159e7ad065073448460117eb24b7a4572f6f4e78eadff65dc0a11c052449fa" },
+        { "path": "config_sentence_transformers.json", "sha256": "1eef72430e7194a1e59680e635aed81ffa083f05668dbc5bb1c56c04c0999c38" },
+        { "path": "modules.json",                      "sha256": "84e40c8e006c9b1d6c122e02cba9b02458120b5fb0c87b746c41e0207cf642cf" },
+        { "path": "sentence_bert_config.json",         "sha256": "eb9b44b13c0f52a3b3685c3b1cbdea1ba8b04bea123b98f61610048940776eb1" },
+        { "path": "special_tokens_map.json",           "sha256": "8c785abebea9ae3257b61681b4e6fd8365ceafde980c21970d001e834cf10835" },
+        { "path": "tokenizer.json",                    "sha256": "21106b6d7dab2952c1d496fb21d5dc9db75c28ed361a05f5020bbba27810dd08" },
+        { "path": "tokenizer_config.json",             "sha256": "a62b2b6784f990259fddef5f16388693a8043be4f69179e6a5257eeb3f9abac4" },
+        { "path": "sentencepiece.bpe.model",           "sha256": "cfc8146abe2a0488e9e2a0c56de7952f7c11ab059eca145a0a727afce0db2865" },
+        { "path": "1_Pooling/config.json",             "sha256": "e54c164a07274f2eb45bb724f54a79d1efcc90c41573887cd9a29aeee0597352" },
+        { "path": "pytorch_model.bin",                 "sha256": "b5e0ce3470abf5ef3831aa1bd5553b486803e83251590ab7ff35a117cf6aad38", "approxBytes": 2271145830 }
+      ],
+      "mirrors": [
+        { "name": "HuggingFace",        "baseUrl": "https://huggingface.co/BAAI/bge-m3/resolve/main/" },
+        { "name": "HF Mirror (China)",  "baseUrl": "https://hf-mirror.com/BAAI/bge-m3/resolve/main/" },
+        { "name": "ModelScope",         "baseUrl": "https://modelscope.cn/models/Xorbits/bge-m3/resolve/master/" }
+      ]
+    },
+    "mxbai-rerank-base-v2": {
+      "displayName": "mxbai-rerank-base-v2 (reranker)",
+      "destDir": "models/reranker/mxbai-rerank-base-v2",
+      "approxBytes": 1000000000,
+      "files": [
+        { "path": "config.json",             "sha256": "a0c0e4d41f64c29c861548344b62e6f4237a2f0c5664454089dc0db127f8eaed" },
+        { "path": "tokenizer.json",          "sha256": "9c5ae00e602b8860cbd784ba82a8aa14e8feecec692e7076590d014d7b7fdafa" },
+        { "path": "tokenizer_config.json",   "sha256": "0a04a9d7d4a62b28482bdfe726c122756de85714fb64166ace92ae75b8f57614" },
+        { "path": "special_tokens_map.json", "sha256": "76862e765266b85aa9459767e33cbaf13970f327a0e88d1c65846c2ddd3a1ecd" },
+        { "path": "model.safetensors",       "sha256": "c01649fe56b3fe32e52da43c69e084dff7c2252cf231a38c56d5a291a674338f", "approxBytes": 988097536 },
+        { "path": "generation_config.json",  "sha256": "722a06091ec871c6cbc3dda5412f294267bcd5d9310f4ffbef1d358000dd3bfc" }
+      ],
+      "mirrors": [
+        { "name": "HuggingFace",        "baseUrl": "https://huggingface.co/mixedbread-ai/mxbai-rerank-base-v2/resolve/main/" },
+        { "name": "HF Mirror (China)",  "baseUrl": "https://hf-mirror.com/mixedbread-ai/mxbai-rerank-base-v2/resolve/main/" },
+        { "name": "ModelScope",         "baseUrl": "https://modelscope.cn/models/mixedbread-ai/mxbai-rerank-base-v2/resolve/master/" }
+      ]
+    }
+  },
+  "_sqlite_vec_note": "sqlite-vec ships as an npm package (sqlite-vec + per-platform optionalDependencies). engine.cjs loads it via require('sqlite-vec'), which resolves through node_modules — no manifest download needed. Cross-platform builds must ensure the matching sqlite-vec-<platform>-<arch> package is installed at packaging time."
+}

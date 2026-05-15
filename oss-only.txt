@@ -1,0 +1,38 @@
+# OSS-only paths — preserved across oss-sync.sh runs.
+# These files exist ONLY in constellation-engine-oss/ and must NOT be copied
+# back into the main constellation-engine/ tree.
+# (Main's pre-commit hook should warn if any of these paths are touched there.)
+
+# Top-level OSS-only artifacts
+LICENSE
+README.md
+CONTRIBUTING.md
+PRIOR-ART.md
+PERMISSIONS.md
+.env.example
+.env.example.advanced
+.gitignore
+.gitattributes
+oss-only.txt
+
+# OSS-specific package manifest (main's package.json has proxy/postinstall hooks)
+package.json
+
+# OSS bootstrap (consolidated schema for fresh installs)
+migrations/oss-bootstrap.sql
+
+# OSS-specific schema.sql (bakes in bi-temporal / owner / event_at columns
+# that main acquires only via numbered migrations — fresh OSS installs
+# skip the historical migration chain, so this MUST diverge from main).
+schema.sql
+
+# OSS-only tooling (scrub/sync pipeline)
+scripts/oss-scrub.cjs
+scripts/oss-scrub-rules.json
+scripts/oss-sync.sh
+
+# Electron launcher (Phase D — built directly here, never in main)
+electron/
+
+# OSS adapter modules (if any)
+src/oss/

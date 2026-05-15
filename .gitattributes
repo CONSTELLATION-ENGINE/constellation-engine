@@ -1,0 +1,32 @@
+# Force LF line endings on all text files in the published OSS tree.
+# Rationale: oss-scrub.cjs applyHeader() inserts header lines using \n; mixing
+# with CRLF source files would produce inconsistent endings. Since downstream
+# users may clone on Windows, this attribute ensures Git checks out text as LF
+# and refuses to mix endings inside one file.
+
+* text=auto eol=lf
+
+# Binary types that must never be normalized.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.eot binary
+*.zip binary
+*.pdf binary
+*.mp3 binary
+*.mp4 binary
+*.wasm binary
+*.wav binary
+*.ogg binary
+*.tar binary
+*.gz binary
+*.bz2 binary
+*.xz binary
+*.7z binary

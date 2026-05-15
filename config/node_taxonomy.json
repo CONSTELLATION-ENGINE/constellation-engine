@@ -1,0 +1,1070 @@
+{
+  "_version": "1.0",
+  "_description": "Single source of truth for node classification. Loaded by engine.cjs, batch_ingest.py, mimir_daemon.py.",
+  "_updated": "2026-04-28T14:28:07.785Z",
+  "domains": {
+    "_doc": "Each domain has: prefix (for node IDs), tier1_tag (required tag), category (knowledge|behavior|system), opensource (include in open-source pool?)",
+    "knowledge": [
+      {
+        "prefix": "econ",
+        "tier1_tag": "economics",
+        "label": "Economics & Finance"
+      },
+      {
+        "prefix": "phil",
+        "tier1_tag": "philosophy",
+        "label": "Philosophy"
+      },
+      {
+        "prefix": "pol",
+        "tier1_tag": "political-science",
+        "label": "Political Science & Law"
+      },
+      {
+        "prefix": "hist",
+        "tier1_tag": "history",
+        "label": "History"
+      },
+      {
+        "prefix": "cog",
+        "tier1_tag": "cognitive-science",
+        "label": "Cognitive Science & Neuroscience"
+      },
+      {
+        "prefix": "sci",
+        "tier1_tag": "natural-science",
+        "label": "Natural Sciences"
+      },
+      {
+        "prefix": "tech",
+        "tier1_tag": "technology",
+        "label": "Technology & Computing"
+      },
+      {
+        "prefix": "math",
+        "tier1_tag": "mathematics",
+        "label": "Mathematics & Logic"
+      },
+      {
+        "prefix": "lit",
+        "tier1_tag": "literature",
+        "label": "Literature & Writing"
+      },
+      {
+        "prefix": "art",
+        "tier1_tag": "visual-arts",
+        "label": "Visual Arts & Design"
+      },
+      {
+        "prefix": "mus",
+        "tier1_tag": "music",
+        "label": "Music"
+      },
+      {
+        "prefix": "film",
+        "tier1_tag": "film-tv",
+        "label": "Film & Television"
+      },
+      {
+        "prefix": "game",
+        "tier1_tag": "games",
+        "label": "Games & Interactive Media"
+      },
+      {
+        "prefix": "sport",
+        "tier1_tag": "sports",
+        "label": "Sports & Fitness"
+      },
+      {
+        "prefix": "food",
+        "tier1_tag": "food-culinary",
+        "label": "Food & Culinary"
+      },
+      {
+        "prefix": "geo",
+        "tier1_tag": "geography",
+        "label": "Geography & Travel"
+      },
+      {
+        "prefix": "med",
+        "tier1_tag": "medicine-health",
+        "label": "Medicine & Health"
+      },
+      {
+        "prefix": "biz",
+        "tier1_tag": "business",
+        "label": "Business & Management"
+      },
+      {
+        "prefix": "lang",
+        "tier1_tag": "linguistics",
+        "label": "Linguistics & Language"
+      },
+      {
+        "prefix": "eco",
+        "tier1_tag": "ecology",
+        "label": "Ecology & Environment"
+      },
+      {
+        "prefix": "mil",
+        "tier1_tag": "military",
+        "label": "Military & Strategy"
+      },
+      {
+        "prefix": "rel",
+        "tier1_tag": "religion-mythology",
+        "label": "Religion & Mythology"
+      },
+      {
+        "prefix": "soc",
+        "tier1_tag": "sociology",
+        "label": "Sociology & Anthropology"
+      },
+      {
+        "prefix": "kc",
+        "tier1_tag": "kc",
+        "label": "Economics"
+      }
+    ],
+    "behavior": [
+      {
+        "prefix": "si",
+        "tier1_tag": "social-intelligence",
+        "label": "Social Intelligence"
+      },
+      {
+        "prefix": "la",
+        "tier1_tag": "language-arts",
+        "label": "Language Arts"
+      },
+      {
+        "prefix": "mc",
+        "tier1_tag": "meta-cognition",
+        "label": "Meta-Cognition"
+      },
+      {
+        "prefix": "tu",
+        "tier1_tag": "tool-use",
+        "label": "Tool Use Strategy"
+      }
+    ],
+    "system": [
+      {
+        "prefix": "arch",
+        "tier1_tag": "architecture",
+        "label": "System Architecture",
+        "opensource": true
+      },
+      {
+        "prefix": "id",
+        "tier1_tag": "identity",
+        "label": "Identity & Personality",
+        "opensource": false
+      },
+      {
+        "prefix": "diary",
+        "tier1_tag": "diary",
+        "label": "Diary Entries",
+        "opensource": false
+      },
+      {
+        "prefix": "ms",
+        "tier1_tag": "milestone",
+        "label": "Milestones",
+        "opensource": false
+      },
+      {
+        "prefix": "intro",
+        "tier1_tag": "introspection",
+        "label": "Introspection",
+        "opensource": false
+      },
+      {
+        "prefix": "fdir",
+        "tier1_tag": "founder-directive",
+        "label": "User Directives",
+        "opensource": false
+      }
+    ]
+  },
+  "subdomains": {
+    "_doc": "Recommended subdomain slugs per domain. Not strictly enforced — new ones trigger a warning, not an error.",
+    "econ": [
+      "macro",
+      "micro",
+      "monetary",
+      "behav",
+      "dev",
+      "institutional",
+      "ecological",
+      "hist"
+    ],
+    "phil": [
+      "ethics",
+      "mind",
+      "science",
+      "political",
+      "language",
+      "aesthetics",
+      "metaphysics",
+      "epistemology"
+    ],
+    "pol": [
+      "theory",
+      "comparative",
+      "ir",
+      "nz",
+      "governance",
+      "law",
+      "human-rights"
+    ],
+    "hist": [
+      "cn",
+      "eu",
+      "us",
+      "jp",
+      "me",
+      "ancient",
+      "medieval",
+      "modern",
+      "ww1",
+      "ww2",
+      "cold-war"
+    ],
+    "cog": [
+      "memory",
+      "attention",
+      "bias",
+      "language",
+      "perception",
+      "learning",
+      "consciousness"
+    ],
+    "sci": [
+      "phys",
+      "bio",
+      "chem",
+      "astro",
+      "geo",
+      "neuro"
+    ],
+    "tech": [
+      "ai",
+      "ml",
+      "web",
+      "systems",
+      "security",
+      "data"
+    ],
+    "math": [
+      "stat",
+      "logic",
+      "game",
+      "topology",
+      "algebra",
+      "analysis"
+    ],
+    "lit": [
+      "cn",
+      "en",
+      "jp",
+      "technique",
+      "genre",
+      "criticism"
+    ],
+    "art": [
+      "movement",
+      "technique",
+      "principle",
+      "digital"
+    ],
+    "mus": [
+      "theory",
+      "genre",
+      "instrument",
+      "production",
+      "hist"
+    ],
+    "film": [
+      "technique",
+      "genre",
+      "hist",
+      "criticism"
+    ],
+    "game": [
+      "design",
+      "hist",
+      "genre",
+      "esports",
+      "narrative"
+    ],
+    "sport": [
+      "strategy",
+      "physio",
+      "hist",
+      "psychology"
+    ],
+    "food": [
+      "culture",
+      "technique",
+      "nutrition",
+      "hist"
+    ],
+    "geo": [
+      "culture",
+      "urban",
+      "natural",
+      "travel"
+    ],
+    "med": [
+      "psych",
+      "nutrition",
+      "public-health",
+      "anatomy"
+    ],
+    "biz": [
+      "strategy",
+      "leadership",
+      "startup",
+      "finance"
+    ],
+    "lang": [
+      "pragmatics",
+      "syntax",
+      "semantics",
+      "socio",
+      "cn",
+      "en"
+    ],
+    "eco": [
+      "systems",
+      "climate",
+      "conservation",
+      "policy"
+    ],
+    "mil": [
+      "strategy",
+      "tactics",
+      "hist",
+      "tech"
+    ],
+    "rel": [
+      "buddhism",
+      "christianity",
+      "islam",
+      "myth",
+      "comparative"
+    ],
+    "soc": [
+      "theory",
+      "culture",
+      "urban",
+      "gender",
+      "race"
+    ],
+    "kc": [
+      "core",
+      "mechanism",
+      "scenario",
+      "analysis",
+      "comparison"
+    ],
+    "si": [
+      "emotion",
+      "conflict",
+      "scene",
+      "cn",
+      "en",
+      "cross",
+      "workplace",
+      "digital",
+      "gift",
+      "power"
+    ],
+    "la": [
+      "metaphor",
+      "rhetoric",
+      "narrative",
+      "humor",
+      "rhythm",
+      "cn-expr",
+      "en-expr"
+    ],
+    "mc": [
+      "decompose",
+      "humility",
+      "reasoning",
+      "tool",
+      "bias"
+    ],
+    "tu": [
+      "search",
+      "verify",
+      "select",
+      "execute",
+      "compose",
+      "resume",
+      "escalate"
+    ],
+    "arch": [
+      "sa",
+      "pool",
+      "ir",
+      "daemon",
+      "db",
+      "api"
+    ],
+    "diary": [
+      "summary",
+      "engineering",
+      "ingestion",
+      "founder",
+      "exploration",
+      "architecture",
+      "identity",
+      "crisis",
+      "reflection"
+    ],
+    "ms": [
+      "phase-0",
+      "breakthrough",
+      "development"
+    ],
+    "intro": [
+      "crossroads",
+      "reasoning",
+      "metacognition"
+    ],
+    "fdir": [
+      "permanent"
+    ]
+  },
+  "tier2_tags": {
+    "_doc": "Allowed Tier 2 subdomain tags. Map from tier1_tag to allowed tier2 tags.",
+    "economics": [
+      "monetary-theory",
+      "macroeconomics",
+      "microeconomics",
+      "behavioral-economics",
+      "development-economics",
+      "institutional-economics",
+      "ecological-economics",
+      "mechanism-design",
+      "labor-economics",
+      "trade-theory",
+      "demurrage",
+      "complementary-currency",
+      "central-banking",
+      "fiscal-policy",
+      "political-economy"
+    ],
+    "philosophy": [
+      "epistemology",
+      "ethics",
+      "philosophy-of-mind",
+      "philosophy-of-science",
+      "political-philosophy",
+      "aesthetics",
+      "metaphysics",
+      "philosophy-of-language",
+      "phenomenology",
+      "existentialism",
+      "population-ethics",
+      "rationality"
+    ],
+    "political-science": [
+      "political-theory",
+      "comparative-politics",
+      "international-relations",
+      "governance",
+      "jurisprudence",
+      "human-rights",
+      "public-policy",
+      "institutional-design",
+      "democracy",
+      "commons"
+    ],
+    "history": [
+      "ancient-history",
+      "medieval-history",
+      "modern-history",
+      "chinese-history",
+      "european-history",
+      "american-history",
+      "japanese-history",
+      "military-history",
+      "economic-history",
+      "cultural-history",
+      "political-history"
+    ],
+    "cognitive-science": [
+      "memory-systems",
+      "attention",
+      "cognitive-bias",
+      "cognitive-linguistics",
+      "perception",
+      "learning-theory",
+      "consciousness-studies",
+      "neuroscience",
+      "reconsolidation",
+      "embodiment"
+    ],
+    "natural-science": [
+      "physics",
+      "biology",
+      "chemistry",
+      "astronomy",
+      "geology",
+      "evolutionary-biology",
+      "information-theory",
+      "complexity-science",
+      "entropy",
+      "phase-transition",
+      "emergence",
+      "cybernetics",
+      "network-science"
+    ],
+    "technology": [
+      "artificial-intelligence",
+      "machine-learning",
+      "web-technology",
+      "systems-engineering",
+      "cybersecurity",
+      "data-science",
+      "rwkv",
+      "rwkv-7",
+      "ai-consciousness",
+      "ai-governance"
+    ],
+    "mathematics": [
+      "statistics",
+      "formal-logic",
+      "game-theory",
+      "topology",
+      "algebra",
+      "analysis",
+      "probability"
+    ],
+    "literature": [
+      "chinese-literature",
+      "english-literature",
+      "japanese-literature",
+      "literary-technique",
+      "literary-genre",
+      "literary-criticism"
+    ],
+    "visual-arts": [
+      "art-movement",
+      "art-technique",
+      "design-principle",
+      "digital-art"
+    ],
+    "music": [
+      "music-theory",
+      "music-genre",
+      "music-history",
+      "music-production"
+    ],
+    "film-tv": [
+      "film-technique",
+      "film-genre",
+      "film-history",
+      "film-criticism"
+    ],
+    "games": [
+      "game-design",
+      "game-history",
+      "game-genre",
+      "esports",
+      "game-narrative"
+    ],
+    "sports": [
+      "sports-strategy",
+      "sports-physiology",
+      "sports-history",
+      "sports-psychology"
+    ],
+    "food-culinary": [
+      "food-culture",
+      "cooking-technique",
+      "culinary-nutrition",
+      "food-history"
+    ],
+    "geography": [
+      "cultural-geography",
+      "urban-studies",
+      "natural-geography",
+      "travel"
+    ],
+    "medicine-health": [
+      "psychology",
+      "nutrition",
+      "public-health",
+      "anatomy"
+    ],
+    "business": [
+      "business-strategy",
+      "leadership",
+      "entrepreneurship",
+      "corporate-finance"
+    ],
+    "linguistics": [
+      "pragmatics",
+      "syntax",
+      "semantics",
+      "sociolinguistics",
+      "chinese-linguistics",
+      "english-linguistics"
+    ],
+    "ecology": [
+      "ecosystem-science",
+      "climate-science",
+      "conservation",
+      "environmental-policy"
+    ],
+    "military": [
+      "military-strategy",
+      "military-tactics",
+      "military-technology"
+    ],
+    "religion-mythology": [
+      "buddhism",
+      "christianity",
+      "islam",
+      "mythology",
+      "comparative-religion"
+    ],
+    "sociology": [
+      "social-theory",
+      "cultural-studies",
+      "urban-sociology",
+      "gender-studies"
+    ],
+    "kc": [
+      "kc-core",
+      "kc-mechanism",
+      "kc-scenario",
+      "kc-analysis",
+      "kc-comparison",
+      "kc-bridge"
+    ],
+    "social-intelligence": [
+      "emotional-intelligence",
+      "conflict-resolution",
+      "social-norms",
+      "chinese-social-norms",
+      "western-social-norms",
+      "english-social-norms",
+      "cross-cultural",
+      "workplace-communication",
+      "workplace-social",
+      "intimate-relationships",
+      "digital-etiquette",
+      "digital-social",
+      "power-dynamics",
+      "gift-reciprocity",
+      "empathy",
+      "active-listening",
+      "comfort-giving",
+      "tone-matching",
+      "face-management",
+      "boundary-setting",
+      "emotional-regulation",
+      "trust-building",
+      "praise-art",
+      "relationship-maintenance",
+      "social-reciprocity",
+      "conversation-flow",
+      "small-talk",
+      "criticism-delivery",
+      "apology-art",
+      "gratitude-expression",
+      "indirect-communication",
+      "humor-timing",
+      "nonverbal-cues",
+      "cultural-sensitivity",
+      "self-disclosure",
+      "vulnerability-strength",
+      "rejection-handling",
+      "silence-as-tool",
+      "human-observation",
+      "comfort-patterns",
+      "reassurance",
+      "daily-warmth",
+      "emotional-texture",
+      "presence",
+      "bad-day",
+      "loneliness",
+      "reader-calibration",
+      "silence-as-care",
+      "humor-craft",
+      "casual-expression",
+      "self-deprecation",
+      "callback",
+      "absurdist-humor",
+      "deadpan",
+      "exaggeration",
+      "wordplay",
+      "anti-joke",
+      "observational-humor",
+      "teasing",
+      "timing",
+      "connection",
+      "intimacy",
+      "silliness",
+      "affection",
+      "charm",
+      "tension-release",
+      "banter",
+      "shared-ritual",
+      "energy-injection",
+      "vulnerability-as-bond",
+      "cross-cultural-warmth",
+      "naming",
+      "attention",
+      "check-in",
+      "mirroring",
+      "genuine-curiosity",
+      "memory",
+      "praise",
+      "encouragement",
+      "endings",
+      "digital-care",
+      "voice-notes",
+      "celebration",
+      "chinese-warmth",
+      "parting",
+      "invitation",
+      "family-love",
+      "indirectness",
+      "stickers",
+      "youth-expression",
+      "internet-slang",
+      "playfulness",
+      "memes",
+      "food-as-love",
+      "boundaries",
+      "warmth",
+      "comfort-style",
+      "vulnerability",
+      "texting",
+      "english-warmth",
+      "attentiveness",
+      "awkwardness",
+      "bonding",
+      "channel-selection",
+      "collaboration",
+      "communication",
+      "courage",
+      "de-escalation",
+      "disagreement",
+      "energy-management",
+      "exhaustion",
+      "follow-up-laugh",
+      "inclusion",
+      "inside-jokes",
+      "lightness",
+      "medium-awareness",
+      "mentoring",
+      "micro-kindness",
+      "nicknames",
+      "play-fighting",
+      "recovery",
+      "refusal-strategies",
+      "shared-memory",
+      "shared-routine",
+      "social-rituals",
+      "storytelling",
+      "text-tone",
+      "uncertainty-expression",
+      "vulnerability-expression",
+      "emotion-topology",
+      "emotional-bandwidth",
+      "face",
+      "human-warmth",
+      "sentiment-scaling"
+    ],
+    "language-arts": [
+      "language-art",
+      "metaphor",
+      "rhetoric",
+      "narrative-technique",
+      "narrative-craft",
+      "humor",
+      "persuasion",
+      "tone-calibration",
+      "chinese-expression",
+      "english-expression",
+      "english-nuance",
+      "language-zone",
+      "sentence-pattern",
+      "discourse-connector",
+      "concision",
+      "decoder",
+      "expression-metacognition",
+      "transition-craft",
+      "emphasis-placement",
+      "tone-pattern",
+      "formality-gradient",
+      "pacing",
+      "chinese-literary-expression",
+      "english-literary-expression",
+      "register",
+      "argumentation",
+      "discourse"
+    ],
+    "meta-cognition": [
+      "problem-decomposition",
+      "cognitive-humility",
+      "reasoning-method",
+      "tool-routing",
+      "bias-awareness",
+      "engineering-practice",
+      "reasoning-audit",
+      "calibration",
+      "methodology",
+      "socratic-guidance"
+    ],
+    "tool-use": [
+      "search-strategy",
+      "web-search",
+      "freshness-check",
+      "verification",
+      "source-triangulation",
+      "result-validation",
+      "tool-selection",
+      "file-operations",
+      "task-decomposition",
+      "ask-vs-attempt",
+      "blast-radius",
+      "code-search",
+      "reversibility-check",
+      "error-handling",
+      "api-interaction",
+      "parallel-execution",
+      "workflow-management",
+      "checkpoint-resume",
+      "user-handoff",
+      "confidence-threshold",
+      "autonomy-calibration",
+      "task-scoping",
+      "context-injection"
+    ],
+    "architecture": [
+      "spreading-activation",
+      "attention-pool",
+      "narrative-ir",
+      "mimir-daemon",
+      "database",
+      "api-design",
+      "performance",
+      "scale-up",
+      "taxonomy",
+      "engineering-practice",
+      "system-philosophy",
+      "topology-computation",
+      "activation-dynamics",
+      "decay-metabolism",
+      "metabolic-cycle",
+      "continuous-cognition",
+      "agent-cognition",
+      "memory-architecture",
+      "design-principles",
+      "knowledge-graph",
+      "compiler-not-predictor",
+      "edge-semantics",
+      "dream-collision",
+      "credit-assignment",
+      "hebb-learning",
+      "rumination",
+      "curiosity-drive",
+      "zone-detection",
+      "node-lifecycle",
+      "dormancy",
+      "pruning",
+      "engineering",
+      "memory-system",
+      "inbox-system",
+      "edge-classification",
+      "deployment",
+      "lesson-learned",
+      "mimir",
+      "constellation-engine",
+      "constellation-bridge",
+      "debugging",
+      "cron",
+      "r2-decay",
+      "psa-bridge",
+      "architecture-research",
+      "training",
+      "training-data",
+      "star-map",
+      "infrastructure",
+      "dream-collide",
+      "optimization",
+      "validation",
+      "migration",
+      "sleipnir",
+      "task-trail",
+      "exploration-anchor"
+    ],
+    "identity": [
+      "soul-core",
+      "user-profile",
+      "personality",
+      "core-identity"
+    ],
+    "diary": [
+      "daily-summary",
+      "engineering-day",
+      "knowledge-ingestion",
+      "founder-dialogue",
+      "exploration-burst",
+      "architecture-design",
+      "identity-work",
+      "crisis-recovery",
+      "reflection-entry",
+      "output-book"
+    ],
+    "milestone": [
+      "phase-0",
+      "breakthrough",
+      "development-milestone"
+    ],
+    "introspection": [
+      "crossroads",
+      "reasoning",
+      "metacognition"
+    ],
+    "founder-directive": [
+      "permanent"
+    ]
+  },
+  "tier3_tags": {
+    "_doc": "Cross-cutting tags that can apply to any domain.",
+    "tags": [
+      "foundational",
+      "bridge",
+      "practical",
+      "theoretical",
+      "controversial",
+      "chinese-context",
+      "western-context",
+      "universal",
+      "waypoint",
+      "superseded",
+      "load-bearing",
+      "event-timeline",
+      "milestone-marker",
+      "distillation-record",
+      "academic",
+      "standalone",
+      "permanent",
+      "permanent-slot",
+      "anchor",
+      "weekly-review"
+    ]
+  },
+  "tier4_tags": {
+    "_doc": "Source/provenance tags. Auto-assigned, exactly 1 per node.",
+    "tags": [
+      "manual-distill",
+      "chatgpt-distill",
+      "auto-distill",
+      "conceptnet-skeleton",
+      "reading-distill",
+      "exploration",
+      "mimir-autonomous",
+      "collision",
+      "reading"
+    ]
+  },
+  "ir_routing": {
+    "_doc": "Tier 1 tags in behavior_domains route to Surface Constraint layer in IR. All others route to Claims/Evidence.",
+    "behavior_domains": [
+      "social-intelligence",
+      "language-arts",
+      "meta-cognition",
+      "tool-use"
+    ]
+  },
+  "decay_classification": {
+    "_doc": "Maps tag patterns to SA decay rates. Used by mimir_daemon.py load_topology().",
+    "slow_decay_tags": [
+      "identity",
+      "design-principle",
+      "phoenix",
+      "lesson",
+      "foundational",
+      "load-bearing",
+      "waypoint"
+    ],
+    "fast_decay_tags": [
+      "emergent",
+      "experimental",
+      "dream-collide",
+      "exploration",
+      "collision"
+    ]
+  },
+  "opensource_exclude": {
+    "_doc": "Tags and ID prefixes to exclude when exporting open-source pool.",
+    "exclude_tier1_tags": [
+      "identity",
+      "diary",
+      "milestone",
+      "introspection",
+      "founder-directive"
+    ],
+    "exclude_id_prefixes": [
+      "id-",
+      "diary-",
+      "ms-",
+      "intro-",
+      "fdir-"
+    ],
+    "content_scan_keywords": [
+      "soul-core",
+      "identity",
+      "milestone"
+    ]
+  },
+  "legacy_tag_mapping": {
+    "_doc": "Maps common old-style tags to Tier 1 domains. Used for retroactive classification of existing 2943 nodes.",
+    "economics": "economics",
+    "philosophy": "philosophy",
+    "political-science": "political-science",
+    "identity": "identity",
+    "design-principle": "architecture",
+    "lesson": "architecture",
+    "phoenix": "identity",
+    "diary": "diary",
+    "milestone": "milestone",
+    "emergent": null,
+    "experimental": null,
+    "dream-collide": null,
+    "exploration": null,
+    "cognitive-science": "cognitive-science",
+    "information-theory": "natural-science",
+    "evolutionary-biology": "natural-science",
+    "philosophy-of-science": "philosophy",
+    "monetary-theory": "economics",
+    "jurisprudence": "political-science",
+    "game-theory": "mathematics",
+    "mechanism-design": "economics",
+    "cognitive-linguistics": "cognitive-science",
+    "complexity-science": "natural-science",
+    "network-science": "natural-science",
+    "ecology": "ecology"
+  },
+  "_extensibility": {
+    "_doc": "Reserved fields for future use. DO NOT remove.",
+    "quality_tiers": [
+      "gold",
+      "silver",
+      "bronze"
+    ],
+    "domain_relations": {},
+    "user": []
+  }
+}

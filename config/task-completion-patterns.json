@@ -1,0 +1,20 @@
+{
+  "_schema": "task-completion-patterns.v1",
+  "_description": "L2 implicit task-completion extraction lexicon (Plan C hybrid). Drives src/task-completion-extractor.js. Patterns intentionally past-tense; grammar gate vetoes negation/future prefixes per BS1.",
+  "completion_phrases": [
+    { "lang": "zh", "pattern": ".*?(?:跑通了|搞定了?|部署(?:完|好了|完了|完毕)|做完了|完成了|拿下了?|搞掂|实装了?|落地了?|上线了?)" },
+    { "lang": "zh", "pattern": ".*?(?:Phase\\s*\\w+\\s*(?:完|完毕|完成|搞定))" },
+    { "lang": "en", "pattern": "(?:.*?\\b(?:shipped|wrapped|completed|finished|deployed|landed|merged|released)\\b)" },
+    { "lang": "en", "pattern": "(?:.*?\\b(?:done|all\\s+done)\\b)" }
+  ],
+  "negation_prefixes": [
+    "没", "未", "还没", "尚未", "暂未", "暂时没", "不会", "不能",
+    "not", "haven't", "hasn't", "didn't", "doesn't", "won't",
+    "will ", "going to", "plan to", "planning to",
+    "打算", "计划", "想要", "要去", "准备", "即将", "马上要"
+  ],
+  "task_id_extractors": [
+    { "kind": "explicit", "pattern": "(?:task|task_id|工程|item|任务)[\\s:：]+([a-z0-9][a-z0-9_-]{3,80})" },
+    { "kind": "phrase",   "pattern": "([\\u4e00-\\u9fa5A-Za-z][\\u4e00-\\u9fa5A-Za-z0-9_\\s-]{2,60})" }
+  ]
+}

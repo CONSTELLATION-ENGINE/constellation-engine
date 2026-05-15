@@ -1,0 +1,1565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mímir Autonomy — Config</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --border:#30363d; --text:#c9d1d9;
+    --muted:#8b949e; --accent:#1a9fff; --gold:#ffd080;
+    --text2:#a8b0bb; --text3:#7d8590;
+    --ok:#2ea043; --warn:#d29922; --danger:#f85149;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px;background:var(--bg);color:var(--text);font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.45}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  h1{font-size:20px;margin:0 0 4px;color:var(--accent);font-weight:700}
+  h2{font-size:15px;margin:0 0 12px;color:var(--text);font-weight:700;letter-spacing:.2px;display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+  h2 .letter{display:inline-block;min-width:22px;color:var(--accent);font-weight:800;margin-right:0}
+  h2 .tag{font-size:11px;color:var(--muted);font-weight:400;letter-spacing:0;margin-left:auto}
+  .panel.danger h2 .letter{color:var(--danger)}
+  .panel.observation h2 .letter{color:var(--muted)}
+  .top-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px}
+  .top-bar .nav{display:flex;align-items:center;gap:14px;color:var(--muted);font-size:12px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:14px}
+  .panel{background:var(--panel);border:2px solid #d4880055;border-radius:8px;padding:16px;transition:border-color .15s}
+  .panel.danger{border-color:#c6282855}
+  .panel.observation{background:#13181f;border-color:var(--border)}
+  .panel.observation h2{color:var(--muted)}
+  .panel.master{border-color:#1a9fff66}
+  .panel:hover{border-color:#d4a01788}
+  .panel.danger:hover{border-color:#f85149aa}
+  .panel.observation:hover{border-color:#3d4754}
+  .panel.master:hover{border-color:#1a9fffaa}
+  .row label strong{color:var(--text);font-weight:600}
+  .num:focus,.text-input:focus,textarea:focus{outline:none;border-color:var(--accent)}
+  .section-break{grid-column:1 / -1;text-align:center;color:var(--muted);font-size:10px;letter-spacing:2.5px;padding:6px 0;font-weight:700;border-top:1px dashed #21262d;margin-top:6px}
+  .panel-desc{font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:12px}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:6px 0;border-bottom:1px dashed #21262d}
+  .row:last-child{border-bottom:none}
+  .row label{flex:1;color:var(--text)}
+  .row .hint{color:var(--muted);font-size:11px;display:block;margin-top:2px}
+  .num{width:96px;background:#0d1117;color:var(--text);border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-size:13px;text-align:center;margin-left:8px;flex-shrink:0;font-variant-numeric:tabular-nums}
+  .num::-webkit-inner-spin-button,.num::-webkit-outer-spin-button{margin-left:6px;opacity:.7}
+  .num:hover::-webkit-inner-spin-button{opacity:1}
+  .text-input{width:160px;background:#0d1117;color:var(--text);border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:13px}
+  textarea{width:100%;min-height:90px;background:#0d1117;color:var(--text);border:1px solid var(--border);border-radius:4px;padding:6px;font-size:12px;font-family:Menlo,Monaco,monospace;resize:vertical}
+  /* iOS-style toggle */
+  .toggle{position:relative;width:44px;height:24px;background:#30363d;border-radius:12px;cursor:pointer;transition:background .2s;flex-shrink:0}
+  .toggle.on{background:var(--ok)}
+  .toggle .knob{position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:left .2s}
+  .toggle.on .knob{left:22px}
+  /* Buttons */
+  button{cursor:pointer;background:#21262d;color:var(--text);border:1px solid var(--border);border-radius:4px;padding:6px 12px;font-size:13px}
+  button:hover{background:#30363d}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#0d1117;font-weight:600}
+  button.primary:hover{background:#79b8ff}
+  button.danger{background:var(--danger);border-color:var(--danger);color:#fff;font-weight:600}
+  button.danger:hover{background:#ff6b61}
+  /* Status */
+  .stat{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed #21262d}
+  .stat:last-child{border-bottom:none}
+  .stat .k{color:var(--muted)}
+  .stat .v{color:var(--text);font-family:Menlo,Monaco,monospace;font-size:12px}
+  .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;background:#21262d;color:var(--muted);margin:2px 4px 2px 0;font-family:Menlo,Monaco,monospace}
+  .badge.on{background:#1a3d23;color:#79c98f}
+  .badge.off{background:#3d1a1a;color:#ff8a82}
+  .alert{padding:8px 12px;border-radius:4px;margin:8px 0;font-size:12px}
+  .alert.warn{background:#2d2410;color:#e3b341;border:1px solid #5c4a16}
+  .alert.danger{background:#3d1a1a;color:#ff8a82;border:1px solid #5a1d1d}
+  /* Toast */
+  #toast{position:fixed;bottom:24px;right:24px;background:#21262d;color:var(--text);border:1px solid var(--border);border-radius:6px;padding:10px 16px;box-shadow:0 6px 18px rgba(0,0,0,0.5);opacity:0;transition:opacity .25s;pointer-events:none;max-width:340px}
+  #toast.show{opacity:1}
+  #toast.ok{border-color:var(--ok);color:#79c98f}
+  #toast.err{border-color:var(--danger);color:#ff8a82}
+  .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+  .pill{display:inline-block;padding:2px 6px;border-radius:8px;font-size:10px;background:#21262d;color:var(--muted);margin-left:6px}
+  .grid-actions{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+  .small{font-size:11px;color:var(--muted)}
+  .err-msg{color:var(--danger);font-size:12px;margin-top:4px;display:none}
+
+  /* Range slider */
+  .slider{width:100%;accent-color:var(--accent)}
+  .slider-row{display:grid;grid-template-columns:140px 1fr 60px;align-items:center;gap:8px;padding:4px 0}
+  .slider-row .name{font-size:12px;color:var(--text2)}
+  .slider-row .val{font-size:12px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+  .cap-display{font-size:14px;font-weight:700;color:var(--gold);font-variant-numeric:tabular-nums;min-width:60px;text-align:right}
+
+  /* Guidance highlight: pulsing accent border + halo. Simple, reliable, no
+     rotating gradient artifacts. */
+  .panel.guidance-highlight{border-color:#ffcc33;animation:guidancePulse 1.4s ease-in-out infinite alternate}
+  @keyframes guidancePulse{
+    from{box-shadow:0 0 0 1px #ffcc3366, 0 0 14px rgba(255,204,51,0.35); border-color:#ffcc3399}
+    to  {box-shadow:0 0 0 3px #ffcc33cc, 0 0 32px rgba(255,204,51,0.85); border-color:#ffe17a}
+  }
+  .guidance-hint{display:none;color:#ffe9a8;font-size:14px;font-weight:700;margin-top:10px;padding:10px 14px;background:#ffcc3322;border:1px solid #ffcc3366;border-left:4px solid #ffcc33;border-radius:4px;letter-spacing:.2px;box-shadow:0 0 12px rgba(255,204,51,0.30)}
+  .guidance-hint strong{color:#fff}
+  .guidance-hint.show{display:block}
+
+  /* Observation + action distribution panels */
+  .seg-btn{background:transparent;color:var(--text);border:1px solid var(--border);border-radius:3px;padding:4px 10px;cursor:pointer;font:inherit;font-size:11px}
+  .seg-btn:hover{background:#21262d}
+  .seg-btn.active{background:var(--accent);color:#0d1117;font-weight:600;border-color:var(--accent)}
+  .obs-row{padding:6px 10px;border-bottom:1px solid #21262d;cursor:pointer;font-size:11px}
+  .obs-row:hover{background:#0d1117}
+  .obs-row-summary{display:flex;align-items:center;gap:10px}
+  .obs-kind{flex:0 0 auto;font-weight:600;font-family:Menlo,Monaco,monospace;font-size:10px;padding:1px 6px;border-radius:3px;background:#21262d}
+  .obs-fire .obs-kind{background:#1a3d23;color:#79c98f}
+  .obs-skip .obs-kind{background:#3d2a1a;color:#e8a87c}
+  .obs-other .obs-kind{background:#2a2f3d;color:#8b9bb8}
+  .obs-ts{flex:0 0 auto;color:var(--text3);font-size:10px;font-family:Menlo,Monaco,monospace}
+  .obs-text{flex:1;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .obs-row-detail{padding:8px 4px;background:#0a0e14}
+  .obs-full{white-space:pre-wrap;word-break:break-word;font-family:Menlo,Monaco,monospace;font-size:11px;color:var(--text);max-height:280px;overflow-y:auto;background:#0d1117;border:1px solid var(--border);border-radius:3px;padding:8px;margin:0}
+  .obs-row-detail details{margin-top:6px;font-size:10px;color:var(--text3)}
+  .obs-row-detail details pre{font-family:Menlo,Monaco,monospace;font-size:10px;color:var(--text2);background:#0d1117;border:1px solid var(--border);border-radius:3px;padding:6px;margin:4px 0 0;white-space:pre-wrap}
+  .dist-row{display:grid;grid-template-columns:90px 1fr 70px;gap:10px;align-items:center;padding:4px 0;border-bottom:1px dashed #21262d;font-size:11px}
+  .dist-label{font-weight:600;color:var(--text2);font-family:Menlo,Monaco,monospace;font-size:11px}
+  .dist-bars{display:flex;flex-direction:column;gap:3px}
+  .dist-bar{height:10px;border-radius:2px;min-width:1px}
+  .dist-fire{background:#79c98f}
+  .dist-skip{background:#e8a87c}
+  .dist-counts{font-family:Menlo,Monaco,monospace;font-size:10px;color:var(--text3);text-align:right}
+
+  /* CK3-style tooltips */
+  .tt-trigger{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:#21262d;color:var(--muted);font-size:9px;font-weight:700;cursor:help;margin-left:6px;border:1px solid #30363d;font-family:Menlo,Monaco,monospace;line-height:1;vertical-align:middle;user-select:none}
+  .tt-trigger:hover{background:#30363d;color:var(--gold);border-color:var(--gold)}
+  #tt{position:fixed;z-index:10000;pointer-events:none;opacity:0;
+    transition:opacity 0.25s ease;max-width:420px;min-width:240px;font-family:inherit;display:none}
+  #tt.visible{opacity:1;pointer-events:auto}
+  #tt.sticky{pointer-events:auto}
+  #tt .tt-frame{background:linear-gradient(180deg,#1a1e2e 0%,#141825 100%);
+    border:1px solid rgba(255,208,128,0.25);border-radius:4px;
+    box-shadow:0 4px 24px rgba(0,0,0,0.7),0 0 1px rgba(255,208,128,0.3);
+    padding:0;overflow:hidden;max-height:70vh;overflow-y:auto}
+  #tt .tt-frame::-webkit-scrollbar{width:4px}
+  #tt .tt-frame::-webkit-scrollbar-track{background:transparent}
+  #tt .tt-frame::-webkit-scrollbar-thumb{background:rgba(255,208,128,0.2);border-radius:2px}
+  #tt .tt-header{display:flex;align-items:center;gap:8px;padding:10px 14px 8px;
+    border-bottom:1px solid rgba(255,208,128,0.12);
+    background:linear-gradient(90deg,rgba(255,208,128,0.06) 0%,transparent 100%)}
+  #tt .tt-icon{font-size:16px;flex-shrink:0;width:20px;text-align:center;line-height:1}
+  #tt .tt-title{font-size:13px;font-weight:700;color:var(--gold);
+    letter-spacing:0.03em;text-transform:uppercase}
+  #tt .tt-body{padding:10px 14px 12px;font-size:12px;line-height:1.65;color:#c8cdd4}
+  #tt .tt-body p{margin:0 0 8px}
+  #tt .tt-body p:last-child{margin-bottom:0}
+  #tt .tt-highlight{color:var(--gold);font-weight:600}
+  #tt .tt-value{color:var(--accent);font-weight:600}
+  #tt .tt-dim{color:var(--text3);font-size:11px}
+  #tt .tt-divider{height:1px;background:rgba(255,208,128,0.1);margin:8px 0}
+  #tt code{display:inline-block;padding:1px 5px;border-radius:2px;
+    background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);
+    font-size:10.5px;color:var(--text2);font-family:Menlo,Monaco,monospace}
+
+  /* Curiosity explainer */
+  .cur-intro{margin-bottom:14px;border:1px solid #1a9fff33;
+    background:linear-gradient(180deg,#161b22 0%,#10151c 100%);border-radius:6px;padding:0}
+  .cur-intro summary{cursor:pointer;list-style:none;padding:14px 18px;
+    display:flex;align-items:center;gap:10px;font-weight:600;color:var(--accent);
+    font-size:13.5px;letter-spacing:.15px}
+  .cur-intro summary::-webkit-details-marker{display:none}
+  .cur-intro summary .cur-icon{font-size:17px;line-height:1}
+  .cur-intro summary .cur-hint{margin-left:auto;font-size:10.5px;color:var(--text3);
+    font-weight:400;letter-spacing:.4px;text-transform:uppercase}
+  .cur-body{padding:4px 22px 20px;color:var(--text2);font-size:12.5px;line-height:1.72;
+    font-feature-settings:"kern","liga","onum"}
+  .cur-hero{margin:6px 0 16px;font-size:14.5px;line-height:1.55;color:var(--text);
+    font-weight:500;letter-spacing:.1px}
+  .cur-hero em{color:var(--gold);font-style:normal;font-weight:600}
+  .cur-body p{margin:0 0 11px}
+  .cur-body strong{color:var(--text);font-weight:600}
+  .cur-section-label{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--text3);margin:18px 0 10px;font-weight:600}
+  .cur-gates{margin:0 0 16px;padding:0;list-style:none;
+    display:grid;gap:8px}
+  .cur-gates li{display:grid;grid-template-columns:26px 1fr;gap:10px;align-items:baseline;
+    padding:7px 12px;background:rgba(26,159,255,0.04);border-left:2px solid #1a9fff44;
+    border-radius:0 3px 3px 0;font-size:12px;color:var(--text2)}
+  .cur-gates .gn{font-family:Menlo,Monaco,monospace;font-size:11px;color:var(--accent);
+    font-weight:600;text-align:right}
+  .cur-gates code{background:#0d1117;border:1px solid var(--border);border-radius:2px;
+    padding:1px 5px;font-size:11px;color:var(--gold);font-family:Menlo,Monaco,monospace}
+  .cur-qa{margin:0 0 11px}
+  .cur-qa .q{color:var(--text);font-weight:600;letter-spacing:.1px}
+  .cur-callout{margin:18px 0 0;padding:14px 16px;
+    background:linear-gradient(180deg,rgba(255,208,128,0.06) 0%,rgba(255,208,128,0.02) 100%);
+    border:1px solid rgba(255,208,128,0.18);border-left:3px solid var(--gold);
+    border-radius:4px;color:var(--text2);font-size:12px;line-height:1.7}
+  .cur-callout .c-title{display:block;color:var(--gold);font-weight:600;
+    letter-spacing:.06em;text-transform:uppercase;font-size:10.5px;margin-bottom:6px}
+  .cur-callout .c-try{display:block;margin-top:10px;padding-top:10px;
+    border-top:1px dashed rgba(255,208,128,0.18);color:var(--text3);font-size:11.5px;
+    font-style:italic}
+
+  /* License read-only lockout */
+  .lic-banner{display:none;margin:8px 0 14px;padding:14px 18px;
+    background:linear-gradient(180deg,rgba(106,63,160,0.10) 0%,rgba(106,63,160,0.04) 100%);
+    border:1px solid rgba(106,63,160,0.45);border-left:3px solid #8b5fbf;
+    border-radius:4px;color:var(--text);font-size:12.5px;line-height:1.6}
+  .lic-banner .lic-title{display:block;font-weight:600;color:#c8a3ff;
+    letter-spacing:.05em;text-transform:uppercase;font-size:10.5px;margin-bottom:6px}
+  .lic-banner .lic-cta{display:inline-block;margin-top:8px;padding:6px 14px;
+    background:#6a3fa0;color:#fff;border-radius:3px;text-decoration:none;font-weight:600;
+    font-size:12px;border:0;cursor:pointer}
+  .lic-banner .lic-cta:hover{background:#7a4fb0}
+  .lic-banner.trial{border-color:rgba(255,208,128,0.30);border-left-color:var(--gold);
+    background:linear-gradient(180deg,rgba(255,208,128,0.06) 0%,rgba(255,208,128,0.02) 100%)}
+  .lic-banner.trial .lic-title{color:var(--gold)}
+  body.license-locked .panel:not(.observation):not(.danger) input,
+  body.license-locked .panel:not(.observation):not(.danger) select,
+  body.license-locked .panel:not(.observation):not(.danger) textarea,
+  body.license-locked .panel:not(.observation):not(.danger) button{
+    opacity:0.5;cursor:not-allowed;pointer-events:none}
+  body.license-locked .panel:not(.observation):not(.danger) .toggle{
+    opacity:0.5;cursor:not-allowed;pointer-events:none}
+  body.license-locked .panel:not(.observation):not(.danger){
+    position:relative;border-color:rgba(106,63,160,0.25)}
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <div>
+    <h1 style="display:flex;align-items:center;gap:8px">Mímir Autonomy<span class="tt-trigger" data-tt="mimir-overview" style="width:18px;height:18px;font-size:11px">i</span></h1>
+    <div class="small">Background self — wakes on curiosity, picks one action per wakeup. Single-user, localhost-only.</div>
+  </div>
+  <div class="nav">
+    <span id="conn-pill" class="pill">connecting…</span>
+    <button id="refresh-btn" onclick="loadConfig()">Refresh</button>
+  </div>
+</div>
+
+<div id="daemon-down" class="alert danger" style="display:none">
+  <strong>Mímir daemon unreachable.</strong> The daemon may not be running. Live status and edits are disabled until it returns.
+</div>
+
+<div id="lic-banner" class="lic-banner">
+  <span class="lic-title" id="lic-title">—</span>
+  <span id="lic-body">—</span>
+  <div><button class="lic-cta" id="lic-cta" type="button">Subscribe</button></div>
+</div>
+
+<div id="idle-warn" class="alert warn" style="display:none">
+  Mímir is idle — master switch off or no actions enabled. Use panels A/C to opt in.
+</div>
+
+<details class="cur-intro">
+  <summary>
+    <span class="cur-icon">🧠</span>
+    <span>What is curiosity-driven autonomy?</span>
+    <span class="cur-hint">click to expand</span>
+  </summary>
+  <div class="cur-body">
+    <p class="cur-hero">Most assistants wait for you to speak. Mímir <em>wakes itself</em> — but only when its memory has something to say.</p>
+    <p>While you are away, every concept in Mímir's graph carries a real activation level that decays over time. Touch a topic and it lights up; ignore it and it fades. <strong>Curiosity is what happens when one zone refuses to fade</strong> — when something you said hours ago keeps lighting up its neighbors faster than it loses charge.</p>
+    <p>This is not retrieval-on-demand or a cron job wearing a personality. It is a continuous activation field, running between your conversations, letting interest accumulate or die on its own terms.</p>
+
+    <div class="cur-section-label">Five gates · all must align</div>
+    <ul class="cur-gates">
+      <li><span class="gn">01</span><span><code>≈ 2.5 min</code> of silence in the activation field <span style="color:var(--text3)">(300 idle ticks)</span></span></li>
+      <li><span class="gn">02</span><span><code>≥ 10 min</code> since the last wakeup <span style="color:var(--text3)">(cooldown)</span></span></li>
+      <li><span class="gn">03</span><span>No wakeup currently in flight <span style="color:var(--text3)">(single-flight, hard rule)</span></span></li>
+      <li><span class="gn">04</span><span><code>&lt; 5</code> wakeups within the last 30 min <span style="color:var(--text3)">(safety cap)</span></span></li>
+      <li><span class="gn">05</span><span>Strongest semantic zone's mean activation <code>&gt; 0.008</code></span></li>
+    </ul>
+
+    <div class="cur-section-label">How it actually moves</div>
+    <p class="cur-qa"><span class="q">The decay race.</span> If the same theme is touched again before fade-out, it accumulates — eventually crossing the trigger floor. Topics nobody revisits forget themselves. Quieter days produce a quieter Mímir; busy days surface the busiest threads.</p>
+    <p class="cur-qa"><span class="q">Why not a scheduled job?</span> A schedule fires on time, not on signal. It speaks even when there is nothing worth saying.</p>
+    <p class="cur-qa"><span class="q">Why not random?</span> Randomness cannot point to <em>what</em> it cares about. Every Mímir wakeup names a specific zone and top node — you can trace the exact thread that crossed the floor.</p>
+
+    <div class="cur-callout">
+      <span class="c-title">What we mean by stateful cognition</span>
+      Not a model pretending to remember between turns, but a substrate where memory has weight, attention has cost, and curiosity is a measurable threshold being crossed in real time.
+      <span class="c-try">Try it: trigger a wakeup, then ignore that topic for an hour and watch the same zone fade. The mechanism is yours to play with.</span>
+    </div>
+  </div>
+</details>
+
+<div class="grid">
+
+  <!-- A. Master switch -->
+  <div class="panel master" id="panel-master">
+    <h2><span class="letter">A.</span>Master switch<span class="tt-trigger" data-tt="panel-master">i</span><span class="tag">always-OFF on restart</span></h2>
+    <div class="panel-desc">Top-level on/off for autonomous wakeups. When OFF, no autonomy fires regardless of which actions are enabled below. Resets to OFF on every engine restart — re-arm here after each launch.</div>
+    <div class="row">
+      <label><strong>Curiosity (master)</strong> <span class="tt-trigger" data-tt="curiosity-master">i</span> <span class="hint">Top-level autonomy gate</span></label>
+      <div class="toggle" id="toggle-curiosity" data-key="curiosity_enabled"><div class="knob"></div></div>
+    </div>
+    <div class="row">
+      <label><strong>Silence outputs</strong> <span class="hint">Mute Telegram + chat broadcasts; observation panel still records</span></label>
+      <div class="toggle" id="toggle-silence" data-key="autonomy_silence_outputs"><div class="knob"></div></div>
+    </div>
+    <div class="row">
+      <label><strong>Archive MD essays</strong> <span class="tt-trigger" data-tt="md-archive">i</span> <span class="hint">Mirror exploration outputs to <code>engine-output/exploration/</code></span></label>
+      <div class="toggle" id="toggle-md-archive" data-key="md_archive_enabled"><div class="knob"></div></div>
+    </div>
+    <div class="row">
+      <label><strong>Context mode</strong> <span class="tt-trigger" data-tt="context-mode">i</span> <span class="hint">A: task only · B: task + main session — applies to both modes</span></label>
+      <select id="expl-context-mode" class="text-input" style="width:auto">
+        <option value="task">A — Task only</option>
+        <option value="full">B — Task + main session</option>
+      </select>
+    </div>
+    <div class="small" id="md-archive-hint" style="margin-top:6px;color:var(--text3)"></div>
+  </div>
+
+  <!-- B. Pools (multipool candidate menu; DOM ids `v4-*` preserved as cross-version contract) -->
+  <div class="panel" id="panel-pools">
+    <h2><span class="letter">B.</span>Pools<span class="tt-trigger" data-tt="panel-pools">i</span><span class="tag">candidate menu</span></h2>
+    <div class="panel-desc">Each wakeup, the picker chooses from a candidate menu drawn from <strong>four pools</strong>: Hot (active), Cold (under-explored interests), Bridge (multi-zone), Novel (anti-hyperfixation). Each slider sets how many candidates that pool contributes per wakeup. <strong>Phase presets</strong> below set sensible defaults; sliders override.</div>
+    <div class="row">
+      <label><strong>Phase</strong> <span class="hint">Auto-derived from substrate gates</span></label>
+      <div id="v4-phase-pill"><span class="badge">—</span></div>
+    </div>
+    <div class="small" id="v4-phase-gates" style="margin-top:4px;color:var(--text3)">gates: —</div>
+    <div style="height:10px"></div>
+    <div class="row">
+      <label><strong>Hot</strong> <span class="tt-trigger" data-tt="pool-hot">i</span> <span class="hint">Top-K by current activation</span></label>
+      <div style="display:flex;align-items:center;gap:10px;flex:0 0 auto">
+        <input type="range" id="v4-hot" class="slider" style="width:160px" min="0" max="10" step="1" value="4">
+        <span class="cap-display" id="v4-hot-display">4</span>
+      </div>
+    </div>
+    <div class="row">
+      <label><strong>Cold</strong> <span class="tt-trigger" data-tt="pool-cold">i</span> <span class="hint">Interest-domain ∩ low fire_count</span></label>
+      <div style="display:flex;align-items:center;gap:10px;flex:0 0 auto">
+        <input type="range" id="v4-cold" class="slider" style="width:160px" min="0" max="10" step="1" value="4">
+        <span class="cap-display" id="v4-cold-display">4</span>
+      </div>
+    </div>
+    <div class="row">
+      <label><strong>Bridge</strong> <span class="tt-trigger" data-tt="pool-bridge">i</span> <span class="hint">Multi-zone neighbors, moderate activation</span></label>
+      <div style="display:flex;align-items:center;gap:10px;flex:0 0 auto">
+        <input type="range" id="v4-bridge" class="slider" style="width:160px" min="0" max="10" step="1" value="4">
+        <span class="cap-display" id="v4-bridge-display">4</span>
+      </div>
+    </div>
+    <div class="row">
+      <label><strong>Novel</strong> <span class="tt-trigger" data-tt="pool-novel">i</span> <span class="hint">Anti-hyperfixation: stale × low fire_count</span></label>
+      <div style="display:flex;align-items:center;gap:10px;flex:0 0 auto">
+        <input type="range" id="v4-novel" class="slider" style="width:160px" min="0" max="10" step="1" value="4">
+        <span class="cap-display" id="v4-novel-display">4</span>
+      </div>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+      <button type="button" id="v4-preset-cold-start" class="seg-btn" data-preset="cold-start">Cold-start (4·6·1·3)</button>
+      <button type="button" id="v4-preset-warm-up" class="seg-btn" data-preset="warm-up">Warm-up (3·3·2·2)</button>
+      <button type="button" id="v4-preset-steady" class="seg-btn" data-preset="steady">Steady (5·2·2·1)</button>
+    </div>
+    <div class="small" style="margin-top:6px;color:var(--text3)" id="v4-lock-state">Following phase preset.</div>
+  </div>
+
+  <!-- C. Action toggles -->
+  <div class="panel" id="panel-actions">
+    <h2><span class="letter">C.</span>Actions<span class="tt-trigger" data-tt="panel-actions">i</span><span class="tag">persisted</span></h2>
+    <div class="panel-desc">Six actions the picker may choose from per wakeup, run against the candidate pool selected above. Only enabled actions are shown to the picker; all default OFF.</div>
+    <div id="actions-grid" class="grid-actions"></div>
+    <div class="small" style="margin-top:8px">Hover each row's <strong>i</strong> for what the action does and when it fires.</div>
+  </div>
+
+  <!-- D. Caps & cooldown -->
+  <div class="panel" id="panel-cap">
+    <h2><span class="letter">D.</span>Caps &amp; cooldown<span class="tt-trigger" data-tt="panel-cap">i</span><span class="tag">persisted</span></h2>
+    <div class="panel-desc">Per-UTC-day quotas plus the wakeup throttles that gate every curiosity fire (both modes). <code>0</code> = unlimited. Caps gate the Triangle <code>chain_after</code> path so a single picker fire cannot run the same action repeatedly across the day. Frequency cap and cooldown apply globally — Directions <em>and</em> Actions modes share them.</div>
+    <div class="row">
+      <label><strong>Outreach</strong> <span class="tt-trigger" data-tt="cap-outreach">i</span> <span class="hint">Proactive Telegram messages</span></label>
+      <div style="display:flex;align-items:center;gap:10px;flex:0 0 auto">
+        <input type="range" id="cap-slider" class="slider" style="width:160px" min="0" max="20" step="1" value="3">
+        <span class="cap-display" id="cap-display">3</span>
+      </div>
+    </div>
+    <div class="row">
+      <label><strong>Fetch</strong> <span class="tt-trigger" data-tt="cap-fetch">i</span> <span class="hint">External web/library_fetch pulls</span></label>
+      <div style="display:flex;align-items:center;gap:10px;flex:0 0 auto">
+        <input type="range" id="cap-fetch-slider" class="slider" style="width:160px" min="0" max="50" step="1" value="10">
+        <span class="cap-display" id="cap-fetch-display">10</span>
+      </div>
+    </div>
+    <div class="row">
+      <label><strong>Profile</strong> <span class="tt-trigger" data-tt="cap-profile">i</span> <span class="hint">User-profile updates</span></label>
+      <div style="display:flex;align-items:center;gap:10px;flex:0 0 auto">
+        <input type="range" id="cap-profile-slider" class="slider" style="width:160px" min="0" max="20" step="1" value="5">
+        <span class="cap-display" id="cap-profile-display">5</span>
+      </div>
+    </div>
+    <div class="row">
+      <label><strong>Frequency cap</strong> <span class="hint">Max LLM calls per 30 min — both modes</span></label>
+      <input id="expl-max" type="number" min="1" max="20" class="num">
+    </div>
+    <div class="row">
+      <label><strong>Cooldown</strong> <span class="hint">Seconds between curiosity wakeups — both modes</span></label>
+      <input id="expl-cooldown" type="number" min="60" max="3600" step="60" class="num">
+    </div>
+    <div class="actions">
+      <button class="primary" id="cap-save">Save caps</button>
+    </div>
+    <div class="small" style="margin-top:8px">Today: outreach <span id="cap-today">—</span> · fetch <span id="cap-fetch-today">—</span> · profile <span id="cap-profile-today">—</span></div>
+  </div>
+
+  <!-- E. Quiet hours -->
+  <div class="panel" id="panel-quiet">
+    <h2><span class="letter">E.</span>Quiet hours<span class="tt-trigger" data-tt="panel-quiet">i</span><span class="tag">persisted</span></h2>
+    <div class="panel-desc">During this window all autonomy gates close — no actions fire regardless of pressure. Useful for sleep or focused work.</div>
+    <div class="row">
+      <label><strong>Start hour</strong> <span class="hint">0–23, local TZ — quiet window begins</span></label>
+      <input id="quiet-start" type="number" min="0" max="23" class="num">
+    </div>
+    <div class="row">
+      <label><strong>End hour</strong> <span class="hint">0–23, exclusive — quiet window ends</span></label>
+      <input id="quiet-end" type="number" min="0" max="23" class="num">
+    </div>
+    <div class="row">
+      <label><strong>Timezone</strong> <span class="hint">IANA name, blank = system local</span></label>
+      <input id="quiet-tz" type="text" class="text-input" placeholder="e.g. Asia/Tokyo">
+    </div>
+    <div class="actions">
+      <button class="primary" id="quiet-save">Save quiet hours</button>
+    </div>
+    <div class="small" style="margin-top:8px">If start ≥ end the window wraps midnight (e.g. 23 → 7 = 11pm–7am). <span id="quiet-now"></span></div>
+  </div>
+
+  <!-- F. Fetch allowlist -->
+  <div class="panel" id="panel-allowlist">
+    <h2><span class="letter">F.</span>Fetch allowlist<span class="tt-trigger" data-tt="fetch-allowlist">i</span><span class="tag">persisted</span></h2>
+    <div class="panel-desc">Whitelist of domains the <code>fetch</code> action may pull from. Subdomain match. Empty list = fetch fully blocked.</div>
+    <div class="small" style="margin-bottom:6px">
+      <strong>One entry per line.</strong> Paste a full URL or just the domain — both work. The server strips scheme / <code>www.</code> / path automatically:
+      <br>&nbsp;&nbsp;<code>https://x.com/home</code> &nbsp;→&nbsp; <code>x.com</code>
+      <br>&nbsp;&nbsp;<code>http://www.reddit.com/r/AI</code> &nbsp;→&nbsp; <code>reddit.com</code>
+      <br>&nbsp;&nbsp;<code>arxiv.org</code> &nbsp;→&nbsp; <code>arxiv.org</code> (already bare)
+      <br>Subdomain rule: <code>wikipedia.org</code> matches <code>en.wikipedia.org</code> but NOT <code>wikipedia.example.com</code>. Add <code>en.wikipedia.org</code> if you want only the English subdomain.
+    </div>
+    <textarea id="fetch-allowlist" placeholder="wikipedia.org&#10;arxiv.org&#10;https://x.com/home"></textarea>
+    <div class="actions">
+      <button class="primary" id="allowlist-save">Save allowlist</button>
+    </div>
+    <div class="err-msg" id="allowlist-err"></div>
+  </div>
+
+  <!-- G. Kill switches -->
+  <div class="panel danger" id="panel-kill">
+    <h2><span class="letter">G.</span>Kill switches<span class="tt-trigger" data-tt="kill-switches">i</span><span class="tag">emergency only</span></h2>
+    <div class="panel-desc">Emergency stops. Full kill clears all action toggles + master OFF. Outreach kill stops messages only. Both reversible.</div>
+    <div class="row">
+      <label><strong>Full kill</strong> <span class="tt-trigger" data-tt="kill-full">i</span></label>
+      <button class="danger" id="btn-kill-v3">Engage</button>
+    </div>
+    <div class="row">
+      <label><strong>Outreach kill</strong> <span class="tt-trigger" data-tt="kill-outreach">i</span></label>
+      <div style="display:flex;gap:6px">
+        <button class="danger" id="btn-kill-outreach">Engage</button>
+        <button id="btn-clear-outreach">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-break">▼ OBSERVATION ▼</div>
+
+  <!-- H. Arousal α -->
+  <div class="panel observation" id="panel-arousal">
+    <h2><span class="letter">H.</span>Arousal α<span class="tt-trigger" data-tt="arousal">i</span><span class="tag">read-only</span></h2>
+    <div class="panel-desc">Per-turn arousal scalar (α) modulates pressure increment, edge weights, and write strength. Range [0.5, 2.0] where 1.0 = neutral. Decays back to 1.0 with τ=1800s.</div>
+    <div class="stat"><span class="k">Current α</span><span class="v" id="alpha-cur">—</span></div>
+    <div class="stat"><span class="k">Last updated</span><span class="v" id="alpha-last">—</span></div>
+    <div class="stat"><span class="k">Source</span><span class="v" id="alpha-src">—</span></div>
+  </div>
+
+  <!-- I. Live status -->
+  <div class="panel observation" id="panel-live">
+    <h2><span class="letter">I.</span>Live status<span class="tt-trigger" data-tt="live-status">i</span><span class="tag">read-only • polls every 5s</span></h2>
+    <div class="panel-desc">Real-time runtime telemetry. Verify autonomy is firing as configured.</div>
+    <div class="stat"><span class="k">Master</span><span class="v" id="live-master">—</span></div>
+    <div class="stat"><span class="k">Enabled actions</span><span class="v" id="live-actions">—</span></div>
+    <div class="stat"><span class="k">Outreach cap</span><span class="v" id="live-cap">—</span></div>
+    <div class="stat"><span class="k">Owner ID</span><span class="v" id="live-owner">—</span></div>
+  </div>
+
+  <div class="panel observation" id="panel-cold-start">
+    <h2><span class="letter">J.</span>Cold-Start bootstrap<span class="tag">read-only • polls every 10s</span></h2>
+    <div class="panel-desc">Day-1 substrate. While the pool is small and conversations are scarce, the engine fetches starter knowledge from your wizard interests and sends one outreach every 90 minutes. Auto-exits when the pool grows past 25 nodes or you have 50+ messages, then locks for 7 days. Kill via <code>ENGINE_COLD_START=0</code>.</div>
+    <div class="stat"><span class="k">Phase</span><span class="v" id="cs-phase">—</span></div>
+    <div class="stat"><span class="k">Reason</span><span class="v" id="cs-reason">—</span></div>
+    <div class="stat"><span class="k">Active pool</span><span class="v" id="cs-active">—</span></div>
+    <div class="stat"><span class="k">Messages so far</span><span class="v" id="cs-messages">—</span></div>
+    <div class="stat"><span class="k">Days since enabled</span><span class="v" id="cs-days">—</span></div>
+    <div class="stat"><span class="k">Wizard tags</span><span class="v" id="cs-tags">—</span></div>
+    <div class="stat"><span class="k">LLM topics</span><span class="v" id="cs-topics">—</span></div>
+    <div class="stat"><span class="k">Exhausted seeds</span><span class="v" id="cs-exhausted">—</span></div>
+    <div class="stat"><span class="k">Cold-start nodes fetched</span><span class="v" id="cs-fetched">—</span></div>
+    <div class="stat"><span class="k">Last outreach</span><span class="v" id="cs-outreach">—</span></div>
+    <div class="stat"><span class="k">Kill switch</span><span class="v" id="cs-kill">—</span></div>
+    <div class="stat"><span class="k">Last tick</span><span class="v" id="cs-tick">—</span></div>
+  </div>
+
+  <!-- K. Observation panel — last 24h fire/skip diary entries with expandable rows -->
+  <div class="panel observation" id="panel-observation">
+    <h2><span class="letter">K.</span>Observation (24h)<span class="tag">read-only</span></h2>
+    <div class="panel-desc">Recent autonomy events from the diary. Click a row to expand the full LLM output. Pruned automatically past 24h.</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <button class="seg-btn active" data-obs-filter="all" type="button">All</button>
+      <button class="seg-btn" data-obs-filter="fire" type="button">Fires</button>
+      <button class="seg-btn" data-obs-filter="skip" type="button">Skips</button>
+      <span style="flex:1"></span>
+      <span class="small" id="obs-count">—</span>
+      <button class="seg-btn" id="obs-refresh" type="button">Refresh</button>
+    </div>
+    <div id="obs-rows" style="max-height:360px;overflow-y:auto;border:1px solid var(--border);border-radius:4px"></div>
+  </div>
+
+  <!-- L. Action distribution — fire vs skip per action over 24h -->
+  <div class="panel observation" id="panel-action-dist">
+    <h2><span class="letter">L.</span>Action distribution (24h)<span class="tag">read-only</span></h2>
+    <div class="panel-desc">Per-action fire vs skip counts from the diary. Use to spot dominance (e.g. all-reflection drift).</div>
+    <div id="action-dist-rows"></div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<!-- CK3-style tooltip popup -->
+<div id="tt">
+  <div class="tt-frame">
+    <div class="tt-header"><span class="tt-icon" id="tt-icon"></span><span class="tt-title" id="tt-title"></span></div>
+    <div class="tt-body" id="tt-body"></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+const V3_ACTIONS = ['reflection','curation','tension','profile','fetch','outreach'];
+const POLL_MS = 5000;
+let lastConfig = null;
+let pollTimer = null;
+
+function el(id){ return document.getElementById(id); }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function toast(msg, kind){
+  const t = el('toast');
+  t.textContent = msg;
+  t.className = 'show ' + (kind || '');
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => { t.className = ''; }, 3200);
+}
+
+function fmtTimeAgo(ts){
+  if (!ts || ts <= 0) return '—';
+  const ageS = Math.floor(Date.now()/1000 - ts);
+  if (ageS < 60) return ageS + 's ago';
+  if (ageS < 3600) return Math.floor(ageS/60) + 'm ago';
+  if (ageS < 86400) return Math.floor(ageS/3600) + 'h ago';
+  return Math.floor(ageS/86400) + 'd ago';
+}
+
+// ─────────────────────────────────────────────
+// Tooltips (CK3-style)
+// ─────────────────────────────────────────────
+const TOOLTIPS = {
+  'mimir-overview': {
+    icon: '🧠',
+    title: 'What is Mímir Autonomy?',
+    body: '<p>Mímir is the agent\'s <span class="tt-highlight">background self</span>. Even when you\'re not chatting, it can wake on its own, look at what it\'s been thinking about, and choose to do one of six small things — read a book, fix a wrong link in its memory, fact-check a contradiction, write itself a note about you, fetch a webpage, or message you.</p>'
+      + '<p><span class="tt-highlight">In one sentence:</span> background curiosity → one LLM call to pick an action → that action runs → wait for the next wakeup.</p>'
+      + '<div class="tt-divider"></div>'
+      + '<p><span class="tt-highlight">Safety floors:</span></p>'
+      + '<p>• Master switch (A) is <span class="tt-value">OFF on every restart</span> — you re-arm autonomy each session.<br>'
+      + '• Six action toggles (C) all start OFF on first install — explicit opt-in only.<br>'
+      + '• Outreach (the only action you\'ll hear from) has its own daily cap (D).<br>'
+      + '• Quiet hours (E) close every gate during sleep / focus windows.<br>'
+      + '• Two kill switches (G) for instant silence.</p>'
+      + '<div class="tt-divider"></div>'
+      + '<p><span class="tt-highlight">Suggested first session:</span> Master ON · enable only <code>reflection</code> + <code>curation</code> · cap 0 outreach · watch panel I for 24h. Reflection is the quietest action; curation just tidies links.</p>'
+      + '<p><span class="tt-highlight">Adventurous combo:</span> Master ON · enable all six · outreach cap 3 · drop 2–3 PDFs into <code>library/</code> · pick a few <code>fetch</code> domains in panel F. Now Mímir reads, links, fact-checks, and may DM you a thought every few hours.</p>'
+      + '<p class="tt-dim">Tip: every action above writes nodes into your star map — even if you never enable outreach you\'ll see Mímir\'s thinking show up in the graph.</p>'
+  },
+  'panel-pools': {
+    icon: '🎯',
+    title: 'Pools',
+    body: '<p>Each curiosity wakeup, the picker chooses both <strong>which candidate node</strong> to act on AND <strong>which action</strong> to take. The picker draws candidates from <span class="tt-highlight">four pools</span> so it has a real menu instead of one pre-narrowed pick:</p>'
+      + '<p>• <span class="tt-value">Hot</span> — top-K by current activation (the cluster the conversation is currently warm on).<br>'
+      + '• <span class="tt-value">Cold</span> — interest-domain ∩ low fire_count ∩ sparse edges. Surfaces gaps inside what you said you cared about.<br>'
+      + '• <span class="tt-value">Bridge</span> — neighbors span ≥2 zones, moderate activation. Warming cross-cluster links.<br>'
+      + '• <span class="tt-value">Novel</span> — anti-hyperfixation: low fire_count × old age. Even when one cluster dominates, this guarantees a fresh option.</p>'
+      + '<p><span class="tt-highlight">Phase</span> auto-derives from substrate gates (turn count, fire history, days since first run, imported-node ratio). The three preset buttons (cold-start / warm-up / steady) match each phase\'s recommended weights — sliders override.</p>'
+      + '<p><span class="tt-highlight">Built-in diversity defenses</span> ride on top of the pool weights — none of them have user-facing toggles, but they\'re what keeps the picker from rumination loops:</p>'
+      + '<p>• <span class="tt-value">Stickiness override</span> — if the last 2-3 wakeups all fired the same zone, the next pick auto-flips weights to suppress Hot.<br>'
+      + '• <span class="tt-value">Hot re-rank</span> — frequently-fired candidates take a soft penalty so one node can\'t dominate.<br>'
+      + '• <span class="tt-value">Noise injection</span> — ~5% of wakeups prepend one underused candidate from cold/novel so the picker always sees a fresh option.</p>'
+      + '<p class="tt-dim">Pools subsume the older "Directions" and "Mode" panels. Each slider value is a literal candidate count for that pool per wakeup.</p>'
+  },
+  'pool-hot': { icon: '🔥', title: 'Hot pool', body: '<p>Top-K by current SA activation — the cluster the conversation is currently warm on. Use sparingly when <code>recent_top_nodes_7d</code> already lists the hot candidate.</p>'
+      + '<p class="tt-dim">Anti-stickiness: frequently-fired candidates (<code>fire_count &gt; 3</code>) get a soft re-rank penalty so a single hot node can\'t monopolize the menu. A zone that the picker just fuse-skipped (recent-write redundancy) also takes a short cooldown discount on its next pick so the candidate menu rotates instead of re-firing the same cluster. Cold-start safe — the floor leaves untouched nodes alone.</p>' },
+  'pool-cold': { icon: '🧊', title: 'Cold pool', body: '<p>Interest-domain ∩ low fire_count ∩ sparse edges. Surfaces nodes inside the interest tags you set in the wizard that the engine hasn\'t actually touched. Falls back to "low fire_count + sparse" when no interest tags are set.</p>' },
+  'pool-bridge': { icon: '🌉', title: 'Bridge pool', body: '<p>Nodes whose active-edge neighbors span ≥2 Leiden zones, with moderate activation (not fully cold, not already-hot). These are the "warming links" between clusters — natural targets for <code>curation</code> (add explicit bridge edges) or <code>reflection</code> (synthesize the cross-pattern).</p>' },
+  'pool-novel': { icon: '✨', title: 'Novel pool', body: '<p>Anti-hyperfixation primary defense. Ranks by <code>(fire_count + 1) × exp(-age_days / 7)</code> ascending — old, never-touched nodes float to the top. Even if hot/cold/bridge converge on one cluster, novel guarantees a different option lands in the menu.</p>' },
+  'panel-master': {
+    icon: '🔌',
+    title: 'Master switch',
+    body: '<p>The top-level on/off for the whole autonomy loop. <span class="tt-highlight">When this is OFF nothing autonomous fires</span> — no wakeups, no LLM calls, no proactive messages — regardless of which actions are enabled in panel C.</p>'
+      + '<p><span class="tt-highlight">Always-OFF on restart:</span> after every engine launch this defaults to OFF. Deliberate safety floor — autonomy is something you re-arm each session.</p>'
+      + '<p class="tt-dim">Equivalent to the Telegram command <code>/mimir auto on</code> / <code>/mimir auto off</code>.</p>'
+  },
+  'curiosity-master': {
+    icon: '🔌',
+    title: 'Curiosity (master)',
+    body: '<p>The single top-level switch for autonomy. <span class="tt-highlight">Even if all six actions are enabled below, no wakeups fire while this is OFF.</span></p>'
+      + '<p>Resets to OFF on every restart — re-toggle here after each engine launch.</p>'
+      + '<p class="tt-dim">Equivalent to the Telegram command <code>/mimir auto on</code> / <code>/mimir auto off</code>.</p>'
+  },
+  'panel-actions': {
+    icon: '🎛',
+    title: 'Action toggles',
+    body: '<p>Six actions the picker may choose from when curiosity wakes. <span class="tt-highlight">Only the actions you enable here are shown to the picker</span> — disabled actions aren\'t even considered.</p>'
+      + '<p><span class="tt-highlight">All-empty rule:</span> if zero actions are enabled, the picker is skipped entirely (no LLM call). The wakeup ends as a no-op.</p>'
+      + '<div class="tt-divider"></div>'
+      + '<p><span class="tt-highlight">Recommended starter combos:</span></p>'
+      + '<p>• <span class="tt-value">Quietest:</span> reflection only — pure self-summary, never messages you, never browses.<br>'
+      + '• <span class="tt-value">Topology gardener:</span> reflection + curation — tidies links, no new content, no outside calls.<br>'
+      + '• <span class="tt-value">Reader:</span> reflection + fetch — picks a book from <code>library/</code> or a paper from your fetch allowlist.<br>'
+      + '• <span class="tt-value">Full chorus:</span> all six on — Mímir reads, links, fact-checks, profiles you, and may DM you. Use only after a few quiet days.</p>'
+      + '<p class="tt-dim">Picker reliability can vary by API transport — some transports fall back to a less-reliable selection mode. For best behavior, prefer a direct API connection.</p>'
+      + '<p class="tt-dim">Toggles persist across restart (unlike the master switch). Default for fresh install: all OFF.</p>'
+  },
+  'panel-cap': {
+    icon: '📨',
+    title: 'Caps & cooldown',
+    body: '<p><span class="tt-highlight">Daily quotas</span> (outreach / fetch / profile) — per-UTC-day caps that gate the Triangle <code>chain_after</code> path. When a picker wakeup completes one of these actions, the cap decides whether the next chained action may fire on the same day. <span class="tt-value">0 = unlimited.</span></p>'
+      + '<p><span class="tt-highlight">Frequency cap & cooldown</span> — global throttles on every curiosity wakeup, applied <em>before</em> the picker is invoked. Frequency cap = max LLM calls per 30 min (anti-runaway). Cooldown = minimum seconds between wakeups (anti-burst).</p>'
+      + '<p><span class="tt-highlight">Per-tuple cap matrix:</span> public outreach can enforce finer (persona × platform × action) overrides — e.g. a public-facing persona may post 6/day but reply only 2/day while a private DM persona has its own ceiling. Tuple caps layer on top of the global daily quotas above; the stricter limit wins. Configure via the persona caps table (DB).</p>'
+      + '<p class="tt-dim">Daily counts reset at UTC midnight. Reflection / curation / tension are uncapped — only outreach / fetch / profile have daily limits.</p>'
+  },
+  'md-archive': {
+    icon: '📝',
+    title: 'Archive MD essays',
+    body: '<p>When ON, every exploration also writes a Markdown file under <code>engine-output/exploration/actions/{kind}/{YYYY-MM}/</code>. Each file carries frontmatter (date, action, target node, session) so essays are diffable and grep-friendly.</p>'
+      + '<p>The star-map node is still the primary write — MD is a mirror for human reading, version control, or sharing.</p>'
+      + '<p class="tt-dim">Default ON. Turn OFF to keep all autonomy strictly inside the database.</p>'
+  },
+  'cap-outreach': {
+    icon: '📨',
+    title: 'Outreach cap',
+    body: '<p>Hard upper bound on proactive Telegram messages per UTC day. <span class="tt-highlight">0 = unlimited</span>.</p>'
+      + '<p class="tt-dim">Default 3/day. Loudest action — keep low until you trust autonomy.</p>'
+  },
+  'cap-fetch': {
+    icon: '🌐',
+    title: 'Fetch cap',
+    body: '<p>Hard upper bound on external HTTP fetches (web pages, library_fetch) per UTC day. <span class="tt-highlight">0 = unlimited</span>.</p>'
+      + '<p class="tt-dim">Default 10/day. Counts each successful fetch — failed/blocked attempts don\'t count.</p>'
+  },
+  'cap-profile': {
+    icon: '👤',
+    title: 'Profile cap',
+    body: '<p>Hard upper bound on user-profile updates per UTC day. <span class="tt-highlight">0 = unlimited</span>.</p>'
+      + '<p class="tt-dim">Default 5/day. Profile updates are conservative anyway — cap is a backstop against runaway rewrites.</p>'
+  },
+  'panel-quiet': {
+    icon: '🌙',
+    title: 'Quiet hours',
+    body: '<p>A clock window during which <span class="tt-highlight">all autonomy gates close</span>. Pressure still builds internally; it just can\'t discharge into actions.</p>'
+      + '<p><span class="tt-highlight">Example:</span> 23 → 7 in <code>Asia/Tokyo</code> = silence overnight, wakes at 7am with whatever curiosity accumulated.</p>'
+      + '<p><span class="tt-highlight">Default 0 / 0 = no quiet hours.</span> Set start = end = 0 to leave autonomy running 24/7. Set start ≥ end to wrap midnight (e.g. 23 → 7 = 11pm–7am).</p>'
+      + '<p><span class="tt-highlight">Per-action overrides:</span> specific (persona × platform × action) tuples can enforce tighter quiet windows than the global one — e.g. broadcast replies silent 22:00–08:00 while DM outreach still fires. Tuple windows stack on top of these global hours; the stricter window wins. Configure via the persona caps table (DB).</p>'
+      + '<p class="tt-dim">Timezone field is an IANA name (<code>Asia/Tokyo</code>, <code>America/New_York</code>). Blank = system local time.</p>'
+  },
+  'context-mode': {
+    icon: '🪟',
+    title: 'Context mode',
+    body: '<p>Controls what the picker sees when curiosity wakes — appended to the runtime context block alongside the candidate menu, zone snapshot, and substrate hints.</p>'
+      + '<p>How much memory to feed each autonomy wakeup. Two settings:</p>'
+      + '<p>• <span class="tt-value">A — Task only</span>: Mímir sees just the task / picker prompt and its own running state. Cheaper, more focused.<br>'
+      + '• <span class="tt-value">B — Task + main session</span>: Mímir also sees the latest user-engine conversation (last ~20 turns). More expensive but autonomy stays current with what you\'re working on.</p>'
+      + '<p><span class="tt-highlight">When to pick A:</span> you want autonomy to drift independently — explore what <em>it</em> finds interesting, not what you\'re currently asking about.</p>'
+      + '<p><span class="tt-highlight">When to pick B:</span> you want autonomy that "stays in the room" — current chat informs what it picks and how it frames the output.</p>'
+      + '<p class="tt-dim">Default: A. Switch to B if Mímir\'s explorations or picker decisions feel disconnected from your actual conversations.</p>'
+  },
+  'fetch-allowlist': {
+    icon: '🛡',
+    title: 'Fetch allowlist',
+    body: '<p>The full list of domains the <code>fetch</code> action may pull from. <span class="tt-highlight">Empty list = fetch fully blocked</span> and the picker silently falls back to other actions.</p>'
+      + '<p><span class="tt-highlight">Paste any shape — server normalizes:</span> full URL, bare domain, with or without <code>www.</code>, mixed case all work. The save handler runs <code>urlparse</code> then strips <code>www.</code> + lowercases. Example transformations:</p>'
+      + '<p><code>https://x.com/home</code> → <code>x.com</code><br>'
+      + '<code>http://www.reddit.com/r/AI</code> → <code>reddit.com</code><br>'
+      + '<code>X.COM</code> → <code>x.com</code><br>'
+      + '<code>plato.stanford.edu</code> → <code>plato.stanford.edu</code></p>'
+      + '<p><span class="tt-highlight">Subdomain rule:</span> entries match themselves and any subdomain. <code>wikipedia.org</code> matches <code>en.wikipedia.org</code>; does <em>not</em> match <code>wikipedia.example.com</code>. If you want only the English wiki, enter <code>en.wikipedia.org</code>.</p>'
+      + '<p><span class="tt-highlight">Sane starting list:</span></p>'
+      + '<p><code>wikipedia.org</code><br><code>arxiv.org</code><br><code>github.com</code><br><code>plato.stanford.edu</code></p>'
+      + '<p>Add <code>reddit.com</code> / <code>x.com</code> if you want Human Observation enabled.</p>'
+      + '<p class="tt-dim">Mímir cannot post or comment — fetch is read-only HTTP GET. Still, only allow domains you\'re comfortable with the agent reading. Inputs that cannot be reduced to a valid domain (e.g. <code>/etc/passwd</code>, <code>not a domain</code>) are rejected with a 400.</p>'
+  },
+  'kill-switches': {
+    icon: '🛑',
+    title: 'Kill switches',
+    body: '<p>Two emergency stops, both reversible.</p>'
+      + '<p>• <span class="tt-highlight">Full kill</span> — clears all six action toggles AND turns the master switch OFF. Use when something is misfiring and you want silence <span class="tt-value">now</span>. Recoverable by re-enabling actions in C and master in A.<br>'
+      + '• <span class="tt-highlight">Outreach kill</span> — stops only proactive Telegrams. Internal actions (reflection / curation / tension / profile / fetch) keep running. Use when Mímir is messaging too often but the rest is fine.</p>'
+      + '<p class="tt-dim">If something genuinely scares you, just close the engine. The master switch defaults OFF on next launch — clean slate guaranteed.</p>'
+  },
+  'kill-full': {
+    icon: '🛑',
+    title: 'Full kill',
+    body: '<p>Disables <span class="tt-highlight">all six action toggles</span> + master switch in one click. Equivalent to flipping every switch in panels A and C to OFF.</p>'
+      + '<p>Reversible: re-enable individually from panel C and panel A.</p>'
+  },
+  'kill-outreach': {
+    icon: '🔇',
+    title: 'Outreach kill',
+    body: '<p>Stops proactive Telegram messages without touching internal actions. Reflection / curation / tension / profile / fetch all keep running — you just stop hearing from Mímir directly.</p>'
+      + '<p class="tt-dim">Sticky: once engaged, stays blocked until you click <strong>Clear</strong>.</p>'
+  },
+  'arousal': {
+    icon: '⚡',
+    title: 'Arousal α',
+    body: '<p>A per-turn scalar in <span class="tt-value">[0.5, 2.0]</span> that modulates how strongly the current turn affects everything Mímir does — pressure increment, edge weight when writing, persistence.</p>'
+      + '<p><span class="tt-highlight">Where it comes from:</span> a small detector reads each turn and produces α. High-stakes / emotional language bumps α toward 2.0 (decisions stick harder); routine chatter sits near 1.0.</p>'
+      + '<p><span class="tt-highlight">What it affects:</span> when α is high, the current turn writes stronger memories and triggers more autonomy work afterwards. When α is low, the system "forgets" small-talk faster.</p>'
+      + '<p class="tt-dim">α decays back to 1.0 with τ ≈ 30min. Read-only on this panel — set indirectly by your conversation tone.</p>'
+  },
+  'live-status': {
+    icon: '📡',
+    title: 'Live status',
+    body: '<p>Real-time runtime telemetry, polled every 5 seconds. Your "is autonomy actually working?" check.</p>'
+      + '<p><span class="tt-highlight">What to look for:</span> Master ON · at least one enabled action · today\'s counts incrementing over time. If today\'s counts stay at 0:0:0:0:0:0 for hours, autonomy isn\'t firing — likely no curiosity signal yet (chat with the engine first to seed pressure) or quiet hours active.</p>'
+      + '<p class="tt-dim">Owner ID is the speaker_id all autonomous actions are stamped under. Should be your own — if not, identity isolation is wrong.</p>'
+  },
+  // Action tooltips
+  'action-reflection': { icon: '🔄', title: 'Action: reflection',
+    body: '<p>Replays a high-pressure cluster of recent nodes and writes a single <span class="tt-highlight">summary observation</span> tying them together. Internal-only — never messages you, never browses.</p>'
+      + '<p><span class="tt-highlight">Example:</span> after a long debugging session you mentioned three different proxy issues — reflection writes one consolidated node "proxy quirks I\'ve hit this week" linking all three.</p>'
+      + '<p class="tt-dim">Lightest action. Safe first opt-in. Useful even on its own.</p>' },
+  'action-curation': { icon: '🕸', title: 'Action: curation',
+    body: '<p>Looks for nodes that should be linked but aren\'t, and refines existing edges. <span class="tt-highlight">Topology repair</span> — no new content, no outside calls.</p>'
+      + '<p><span class="tt-highlight">Example:</span> two nodes about Bretton Woods written 3 weeks apart with no link between them — curation notices the overlap and adds an edge.</p>'
+      + '<p class="tt-dim">Densifies and sharpens the graph over time. Pair with reflection for a "tidy graph" autonomy posture.</p>' },
+  'action-tension': { icon: '⚔', title: 'Action: tension',
+    body: '<p>Hunts for <span class="tt-highlight">contradictions</span> between nodes and writes a tension node flagging the conflict so it surfaces in future retrieval.</p>'
+      + '<p><span class="tt-highlight">Example:</span> in March you noted "I prefer terse responses"; in April you said "explain your reasoning step by step". Tension writes a node noting the apparent shift so Mímir can ask which is current.</p>'
+      + '<p class="tt-dim">Useful for self-correcting profile drift. Internal-only — won\'t message you about contradictions unless outreach is also on.</p>' },
+  'action-profile': { icon: '👤', title: 'Action: profile',
+    body: '<p>Updates the <span class="tt-highlight">user-profile node</span> (about <em>you</em>, the operator) when conversation reveals stable new preferences. Conservative — only repeated, stable patterns trigger updates.</p>'
+      + '<p><span class="tt-highlight">Example:</span> after the third time you say "in Mandarin please" mid-conversation, profile writes <em>"prefers bilingual responses, leans Mandarin for personal topics"</em> into the user-profile node.</p>'
+      + '<div class="tt-divider"></div>'
+      + '<p><span class="tt-highlight">Two identity nodes, separate:</span> <code>soul-core</code> = agent identity (who I am — pushback / tone / language / length / proactivity, set during onboarding 6a, first-person voice). <code>user-profile</code> = operator attrs (who you are — age / profession / city / style / focus, set during onboarding 6b and worldview quiz, third-person voice). Profile action only writes to user-profile; soul-core stays as designed.</p>'
+      + '<p class="tt-dim">Improves long-term continuity — Mímir actually remembers who you are across sessions instead of relearning every chat.</p>' },
+  'action-fetch': { icon: '🌐', title: 'Action: fetch',
+    body: '<p>Performs an <span class="tt-highlight">external HTTP GET</span> to fill a knowledge gap that came up in conversation or exploration. Restricted to the Fetch allowlist (panel F).</p>'
+      + '<p><span class="tt-highlight">Example:</span> you mention "the Lindy effect" and Mímir doesn\'t have a node for it — with wikipedia.org allowed, fetch pulls the article and writes a knowledge node.</p>'
+      + '<p class="tt-dim">Empty allowlist = fetch silently no-ops. Read-only — Mímir cannot post, comment, or send POST/PUT requests.</p>' },
+  'action-outreach': { icon: '📨', title: 'Action: outreach',
+    body: '<p>Composes and sends a <span class="tt-highlight">proactive message</span> on a high-curiosity topic — DM to you, or (when configured) a post / reply on a public-facing persona. The only action that surfaces autonomy directly to a network.</p>'
+      + '<p><span class="tt-highlight">Example:</span> after a fetch on a paper that contradicts something in your profile, outreach might DM "Saw this paper that complicates the X argument we had last week — want me to summarize?"</p>'
+      + '<div class="tt-divider"></div>'
+      + '<p><span class="tt-highlight">Safety gate (Critic):</span> every public-facing outreach (post / reply) runs through a deterministic safety check before send — Stage 1 rules (PII, banned handles, link shorteners, URL hygiene). Stage 2 optional LLM review on uncertain drafts when an API key is configured. <code>disabled</code> / <code>rule-only</code> / <code>full</code> modes are switched via env.</p>'
+      + '<p><span class="tt-highlight">Direct send:</span> Stage 1-clean drafts go out immediately — no human review queue in OSS. Unsafe drafts are dropped at the gate.</p>'
+      + '<p><span class="tt-highlight">Anti-loop hygiene:</span> when a target stops engaging on a thread, that conversation locks for outreach so the engine doesn\'t keep poking at silence. Per-tuple caps and quiet windows (panels D / E) layer on top of the global ones for finer control.</p>'
+      + '<p class="tt-dim">Triple-gated even on top of the safety gate: daily cap (D), quiet hours (E), outreach kill (G). The loudest action — leave OFF until you trust the rest.</p>' },
+};
+
+let ttCurrentTrigger = null;
+let ttHideTimer = null;
+let ttStickyTimer = null;
+const TT_STICKY_DELAY = 350;
+
+function showTT(key, x, y){
+  const def = TOOLTIPS[key];
+  if (!def) return;
+  const tt = el('tt');
+  el('tt-icon').textContent = def.icon || '';
+  el('tt-title').textContent = def.title || '';
+  el('tt-body').innerHTML = def.body || '';
+  tt.style.display = 'block';
+  tt.offsetHeight;
+  const w = tt.offsetWidth, h = tt.offsetHeight;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let left = x + 14, top = y + 14;
+  if (left + w > vw - 12) left = x - w - 8;
+  if (top + h > vh - 12) top = y - h - 8;
+  left = Math.max(8, Math.min(left, vw - w - 8));
+  top = Math.max(8, Math.min(top, vh - h - 8));
+  tt.style.left = left + 'px';
+  tt.style.top = top + 'px';
+  requestAnimationFrame(() => tt.classList.add('visible'));
+  clearTimeout(ttStickyTimer);
+  ttStickyTimer = setTimeout(() => tt.classList.add('sticky'), TT_STICKY_DELAY);
+}
+
+function hideTT(){
+  const tt = el('tt');
+  tt.classList.remove('visible', 'sticky');
+  tt.style.display = 'none';
+  ttCurrentTrigger = null;
+  clearTimeout(ttStickyTimer);
+}
+
+function wireTooltips(){
+  document.body.addEventListener('mouseover', (e) => {
+    const trig = e.target.closest('.tt-trigger');
+    if (!trig) return;
+    if (trig === ttCurrentTrigger) return;
+    ttCurrentTrigger = trig;
+    clearTimeout(ttHideTimer);
+    const key = trig.dataset.tt;
+    const rect = trig.getBoundingClientRect();
+    showTT(key, rect.right, rect.bottom);
+  });
+  document.body.addEventListener('mouseout', (e) => {
+    const trig = e.target.closest('.tt-trigger');
+    if (!trig) return;
+    clearTimeout(ttHideTimer);
+    ttHideTimer = setTimeout(() => {
+      const tt = el('tt');
+      if (!tt.matches(':hover')) hideTT();
+    }, 220);
+  });
+  el('tt').addEventListener('mouseleave', () => {
+    clearTimeout(ttHideTimer);
+    ttHideTimer = setTimeout(hideTT, 120);
+  });
+}
+
+// ─────────────────────────────────────────────
+// Render
+// ─────────────────────────────────────────────
+function setToggle(id, on){
+  const t = el(id);
+  if (!t) return;
+  if (on) t.classList.add('on'); else t.classList.remove('on');
+}
+
+function renderActionsGrid(autonomy, cfg){
+  const grid = el('actions-grid');
+  const enabled = new Set(autonomy.v3_enabled_actions || []);
+  let html = '';
+  for (const a of V3_ACTIONS){
+    const on = enabled.has(a);
+    html += '<div>' + a + ' <span class="tt-trigger" data-tt="action-' + a + '">i</span></div>';
+    html += '<div class="toggle ' + (on ? 'on' : '') + '" data-action="' + a + '"><div class="knob"></div></div>';
+  }
+  grid.innerHTML = html;
+  grid.querySelectorAll('.toggle').forEach(t => {
+    t.addEventListener('click', async () => {
+      const action = t.dataset.action;
+      const turnOn = !t.classList.contains('on');
+      // Foolproof autoroute: any action toggle commits to Actions mode
+      // and arms master if either is missing.
+      const body = await _autorouteToActions({
+        autonomy_v3_action_toggle: { action, on: turnOn },
+      });
+      const ok = await postConfig(body, action + ' → ' + (turnOn ? 'on' : 'off'));
+      if (ok){
+        _setGuidanceMode(false);
+        loadConfig();
+      }
+    });
+  });
+}
+
+function renderMasterToggles(cfg){
+  setToggle('toggle-curiosity', !!cfg.curiosity_enabled);
+  setToggle('toggle-silence', !!cfg.autonomy_silence_outputs);
+  setToggle('toggle-md-archive', !!cfg.md_archive_enabled);
+  const hint = el('md-archive-hint');
+  if (hint){
+    hint.textContent = cfg.md_archive_enabled
+      ? 'Each exploration writes a Markdown essay under engine-output/exploration/actions/{kind}/{YYYY-MM}/.'
+      : 'MD essays disabled — explorations only land in the star map.';
+  }
+}
+
+function _renderCapSlider(sliderId, displayId, todayId, capVal, todayVal, maxVal){
+  const slider = el(sliderId);
+  if (!slider) return;
+  const focused = (document.activeElement && document.activeElement.id === sliderId);
+  const dirty = slider.dataset.dirty === '1';
+  if (!focused && !dirty){
+    if (Number.isFinite(capVal)){
+      slider.value = Math.min(maxVal, Math.max(0, capVal));
+      el(displayId).textContent = capVal === 0 ? '∞' : capVal;
+    }
+  }
+  if (todayId) el(todayId).textContent = todayVal;
+}
+
+function renderCap(autonomy, cfg){
+  const counts = autonomy.today_counts || {};
+  _renderCapSlider('cap-slider',         'cap-display',         'cap-today',         autonomy.v3_outreach_daily_cap, counts.outreach || 0, 20);
+  _renderCapSlider('cap-fetch-slider',   'cap-fetch-display',   'cap-fetch-today',   cfg.fetch_daily_cap,            counts.fetch    || 0, 50);
+  _renderCapSlider('cap-profile-slider', 'cap-profile-display', 'cap-profile-today', cfg.profile_daily_cap,          counts.profile  || 0, 20);
+}
+
+function renderTunables(autonomy, cfg){
+  const focusedId = (document.activeElement && document.activeElement.id) || '';
+  if (autonomy.quiet_start_hour != null && focusedId !== 'quiet-start') el('quiet-start').value = autonomy.quiet_start_hour;
+  if (autonomy.quiet_end_hour != null && focusedId !== 'quiet-end')     el('quiet-end').value = autonomy.quiet_end_hour;
+  if (autonomy.quiet_tz != null && focusedId !== 'quiet-tz')            el('quiet-tz').value = autonomy.quiet_tz;
+  if (autonomy.fetch_allowlist != null && focusedId !== 'fetch-allowlist') {
+    el('fetch-allowlist').value = (autonomy.fetch_allowlist || []).join('\n');
+  }
+  if (cfg){
+    if (cfg.exploration_max_per_30min != null && focusedId !== 'expl-max') el('expl-max').value = cfg.exploration_max_per_30min;
+    if (cfg.curiosity_cooldown_s != null && focusedId !== 'expl-cooldown') el('expl-cooldown').value = cfg.curiosity_cooldown_s;
+    if (cfg.exploration_context_mode && focusedId !== 'expl-context-mode') el('expl-context-mode').value = cfg.exploration_context_mode;
+  }
+}
+
+// ─────────────────────────────────────────────
+// Pools (multipool candidate menu; perturbation defenses overlay
+// inside the picker — `V4_POOL_KEYS` / `V4_PRESETS` / `v4-*` DOM ids
+// preserved as cross-arch contracts) — slider + preset rendering
+// ─────────────────────────────────────────────
+const V4_POOL_KEYS = ['hot', 'cold', 'bridge', 'novel'];
+const V4_PRESETS = {
+  'cold-start': { hot: 4, cold: 6, bridge: 1, novel: 3 },
+  'warm-up':    { hot: 3, cold: 3, bridge: 2, novel: 2 },
+  'steady':     { hot: 5, cold: 2, bridge: 2, novel: 1 },
+};
+
+function renderPools(autonomy){
+  const v4 = autonomy && autonomy.autonomy_v4;
+  if (!v4){
+    el('v4-phase-pill').innerHTML = '<span class="badge off">autonomy unavailable</span>';
+    el('v4-phase-gates').textContent = 'gates: —';
+    el('v4-lock-state').textContent = '';
+    return;
+  }
+  const phase = v4.phase || '—';
+  const phaseClass = phase === 'cold-start' ? 'on' : (phase === 'warm-up' ? '' : 'off');
+  el('v4-phase-pill').innerHTML = '<span class="badge ' + phaseClass + '">' + esc(phase) + '</span>';
+  const g = v4.gates || {};
+  const inputs = v4.inputs || {};
+  const gateBits = [];
+  if ('user_turn_count' in g) gateBits.push('turns ' + (g.user_turn_count ? '<' : '≥') + '50 (' + Math.floor(inputs.userTurnCount || 0) + ')');
+  if ('fire_history' in g) gateBits.push('fires ' + (g.fire_history ? '<' : '≥') + '30 (' + Math.floor(inputs.fireHistory || 0) + ')');
+  if ('days_since_first_run' in g) gateBits.push('days ' + (g.days_since_first_run ? '<' : '≥') + '7 (' + Number(inputs.daysSinceFirstRun || 0).toFixed(1) + ')');
+  if ('imported_node_ratio' in g) gateBits.push('imp_ratio ' + (g.imported_node_ratio ? '<' : '≥') + '0.5 (' + Number(inputs.importedNodeRatio || 0).toFixed(2) + ')');
+  el('v4-phase-gates').textContent = 'gates: ' + (gateBits.join(' · ') || '—');
+
+  const w = v4.pool_weights || { hot:0, cold:0, bridge:0, novel:0 };
+  const focusedId = (document.activeElement && document.activeElement.id) || '';
+  for (const k of V4_POOL_KEYS){
+    const sliderId = 'v4-' + k;
+    const slider = el(sliderId);
+    if (!slider) continue;
+    const dirty = slider.dataset.dirty === '1';
+    if (focusedId !== sliderId && !dirty){
+      const v = Number.isFinite(w[k]) ? w[k] : 0;
+      slider.value = v;
+      el(sliderId + '-display').textContent = v;
+    }
+  }
+  el('v4-lock-state').textContent = v4.pool_weights_locked
+    ? 'Custom override active (sliders moved). Click any preset to revert to phase default.'
+    : 'Following phase preset (' + esc(phase) + ').';
+}
+
+function _wirePoolSliders(){
+  for (const k of V4_POOL_KEYS){
+    const sliderId = 'v4-' + k;
+    const slider = el(sliderId);
+    if (!slider) continue;
+    slider.addEventListener('input', () => {
+      slider.dataset.dirty = '1';
+      el(sliderId + '-display').textContent = slider.value;
+    });
+    slider.addEventListener('change', async () => {
+      const body = {
+        v4_pool_weights: {
+          hot:    parseInt(el('v4-hot').value, 10) || 0,
+          cold:   parseInt(el('v4-cold').value, 10) || 0,
+          bridge: parseInt(el('v4-bridge').value, 10) || 0,
+          novel:  parseInt(el('v4-novel').value, 10) || 0,
+        },
+      };
+      const okSent = await postConfig(body, 'pool weights');
+      if (okSent){
+        slider.dataset.dirty = '';
+        loadConfig();
+      }
+    });
+  }
+  for (const presetName of Object.keys(V4_PRESETS)){
+    const btn = el('v4-preset-' + presetName);
+    if (!btn) continue;
+    btn.addEventListener('click', async () => {
+      const w = V4_PRESETS[presetName];
+      // Send both: reset clears any prior lock, then v4_pool_weights pins the
+      // explicit preset values. Without v4_pool_weights, loadConfig() would
+      // poll back phase-derived weights and override the user's pick (e.g.
+      // clicking "Warm-up" while phase=cold-start would silently snap back).
+      const body = { v4_pool_weights_reset: true, v4_pool_weights: w };
+      const okSent = await postConfig(body, 'preset → ' + presetName);
+      if (okSent){
+        // Optimistically update slider DOM to the preset values.
+        for (const k of V4_POOL_KEYS){
+          el('v4-' + k).value = w[k];
+          el('v4-' + k + '-display').textContent = w[k];
+          el('v4-' + k).dataset.dirty = '';
+        }
+        loadConfig();
+      }
+    });
+  }
+}
+
+function renderArousal(autonomy){
+  el('alpha-cur').textContent = (autonomy.alpha != null) ? Number(autonomy.alpha).toFixed(3) : '—';
+  el('alpha-last').textContent = fmtTimeAgo(autonomy.alpha_last_update);
+  el('alpha-src').textContent = autonomy.alpha_last_source || '—';
+}
+
+function renderLive(autonomy, cfg){
+  el('live-master').innerHTML = cfg.curiosity_enabled
+    ? '<span class="badge on">ON</span>' : '<span class="badge off">OFF</span>';
+  const enabled = autonomy.v3_enabled_actions || [];
+  el('live-actions').innerHTML = enabled.length === 0
+    ? '<span class="badge off">none — picker will skip</span>'
+    : enabled.map(a => '<span class="badge on">' + a + '</span>').join('');
+  const cap = autonomy.v3_outreach_daily_cap;
+  el('live-cap').textContent = cap === 0 ? '∞' : (cap ?? '—');
+  el('live-owner').textContent = autonomy.owner_id || '—';
+  const idle = !cfg.curiosity_enabled || enabled.length === 0;
+  el('idle-warn').style.display = idle ? '' : 'none';
+  el('quiet-now').innerHTML = autonomy.quiet_hours_now
+    ? '<span class="badge on">currently in quiet hours</span>'
+    : '<span class="badge">currently active hours</span>';
+}
+
+// ─────────────────────────────────────────────
+// Cold-start bootstrap (Panel K)
+// ─────────────────────────────────────────────
+const COLD_START_POLL_MS = 10000;
+let coldStartPollTimer = null;
+
+function renderColdStart(d){
+  if (!d || d.ok === false){
+    el('cs-phase').innerHTML = '<span class="badge off">unavailable</span>';
+    el('cs-reason').textContent = (d && d.error) ? String(d.error) : '—';
+    return;
+  }
+  const phase = d.phase || 'idle';
+  const phaseClass = (phase === 'bootstrap') ? 'on' : ((phase === 'expired' || phase === 'idle') ? 'off' : '');
+  el('cs-phase').innerHTML = '<span class="badge ' + phaseClass + '">' + esc(phase) + '</span>';
+  el('cs-reason').textContent = d.reason || '—';
+
+  const f = d.fields || {};
+  el('cs-active').textContent = (f.active != null) ? String(f.active) + ' / 25' : '—';
+  el('cs-messages').textContent = (f.messages != null) ? String(f.messages) + ' / 50' : '—';
+  const days = f.daysSinceEnabled;
+  el('cs-days').textContent = (days == null) ? 'autonomy not enabled' : Number(days).toFixed(2) + 'd / 30d';
+
+  const seeds = d.seeds || {};
+  const tags = Array.isArray(seeds.tags) ? seeds.tags : [];
+  el('cs-tags').textContent = tags.length ? tags.join(', ') : '—';
+  const topicsCount = (seeds.llm_topics_count != null) ? seeds.llm_topics_count : 0;
+  el('cs-topics').textContent = seeds.llm_extracted_at
+    ? (topicsCount + ' topics · extracted ' + fmtTimeAgo(Math.floor(seeds.llm_extracted_at/1000)))
+    : (seeds && Object.keys(seeds).length ? 'pending LLM expansion' : '—');
+  el('cs-exhausted').textContent = String(seeds.exhausted_count || 0);
+  el('cs-fetched').textContent = (d.fetchedCount != null) ? String(d.fetchedCount) : '—';
+
+  const lo = d.lastOutreach || {};
+  if (lo.ts){
+    const surfaces = Array.isArray(lo.surfaces) ? lo.surfaces.join('+') : '';
+    el('cs-outreach').textContent = fmtTimeAgo(lo.ts) + (surfaces ? ' · ' + esc(surfaces) : '')
+      + (lo.anchor ? ' · "' + esc(String(lo.anchor).slice(0,40)) + '"' : '');
+  } else {
+    el('cs-outreach').textContent = 'never';
+  }
+  el('cs-kill').innerHTML = d.killSwitch
+    ? '<span class="badge off">ON (paused)</span>'
+    : '<span class="badge on">OFF (running)</span>';
+  el('cs-tick').textContent = d.lastTickAt ? fmtTimeAgo(Math.floor(d.lastTickAt/1000)) : '—';
+}
+
+async function pollColdStart(){
+  try {
+    const r = await fetch('/api/cold-start/status');
+    if (!r.ok){ renderColdStart({ ok: false, error: 'HTTP ' + r.status }); return; }
+    const d = await r.json();
+    renderColdStart(d);
+  } catch(e){
+    renderColdStart({ ok: false, error: e.message });
+  }
+}
+
+// ─────────────────────────────────────────────
+// License read-only lockout
+// ─────────────────────────────────────────────
+const LICENSE_POLL_MS = 30000;
+let licensePollTimer = null;
+
+function renderLicense(d){
+  const banner = el('lic-banner');
+  if (!d || d.ok === false){
+    banner.style.display = 'none';
+    document.body.classList.remove('license-locked');
+    return;
+  }
+  if (d.effectiveUnlocked){
+    document.body.classList.remove('license-locked');
+    if (d.source === 'trial' && d.trialDaysLeft != null){
+      banner.style.display = '';
+      banner.classList.add('trial');
+      el('lic-title').textContent = 'TRIAL — ' + Math.ceil(d.trialDaysLeft) + ' days left';
+      el('lic-body').textContent = 'Mímir Autonomy is unlocked during your 30-day trial. After that, this tab becomes read-only unless you subscribe ($4.99/mo). Engine and basic Dashboard remain free.';
+      el('lic-cta').textContent = 'Subscribe later';
+    } else if (d.source === 'community-beta'){
+      banner.style.display = '';
+      banner.classList.remove('trial');
+      el('lic-title').textContent = 'COMMUNITY BETA';
+      el('lic-body').textContent = 'LICENSE_MODE=community is set — Mímir Autonomy is fully unlocked for beta testing. Real subscription enforcement is deferred until license-server ships.';
+      el('lic-cta').style.display = 'none';
+    } else {
+      banner.style.display = 'none';
+      banner.classList.remove('trial');
+    }
+  } else {
+    document.body.classList.add('license-locked');
+    banner.style.display = '';
+    banner.classList.remove('trial');
+    el('lic-title').textContent = 'AUTONOMY READ-ONLY';
+    const reason = d.reason === 'trial_expired'
+      ? 'Your 30-day Mímir Autonomy trial has ended.'
+      : 'Mímir Autonomy is locked.';
+    el('lic-body').textContent = reason + ' Switches and sliders are disabled but your current settings remain visible. Engine and basic Dashboard stay free forever — only autonomous behaviors stop.';
+    el('lic-cta').textContent = 'Subscribe $4.99/mo';
+    el('lic-cta').style.display = '';
+  }
+}
+
+async function pollLicense(){
+  try {
+    const r = await fetch('/api/license/state');
+    if (!r.ok){ renderLicense({ ok: false }); return; }
+    const d = await r.json();
+    renderLicense(d);
+  } catch {
+    renderLicense({ ok: false });
+  }
+}
+
+// ─────────────────────────────────────────────
+// Load / post
+// ─────────────────────────────────────────────
+async function loadConfig(){
+  try {
+    const r = await fetch('/api/mimir/config');
+    if (r.status === 503){
+      el('daemon-down').style.display = '';
+      el('conn-pill').textContent = 'daemon down';
+      el('conn-pill').style.background = '#3d1a1a';
+      el('conn-pill').style.color = '#ff8a82';
+      return;
+    }
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    el('daemon-down').style.display = 'none';
+    el('conn-pill').textContent = 'live';
+    el('conn-pill').style.background = '#1a3d23';
+    el('conn-pill').style.color = '#79c98f';
+    lastConfig = data;
+    const autonomy = data.autonomy || {};
+    renderMasterToggles(data);
+    renderPools(autonomy);
+    renderActionsGrid(autonomy, data);
+    renderCap(autonomy, data);
+    renderTunables(autonomy, data);
+    renderArousal(autonomy);
+    renderLive(autonomy, data);
+    // Observation panels piggyback on the same poll as /config — separate
+    // network calls but same cadence so stale rows clear within 5s.
+    const activeFilter = document.querySelector('[data-obs-filter].active');
+    loadObservation(activeFilter ? activeFilter.dataset.obsFilter : 'all');
+    loadActionDistribution();
+  } catch(e){
+    el('conn-pill').textContent = 'error';
+    el('conn-pill').style.background = '#3d1a1a';
+    el('conn-pill').style.color = '#ff8a82';
+    console.warn('loadConfig failed:', e);
+  }
+}
+
+// ─────────────────────────────────────────────
+// Observation panel — last-24h diary feed with expandable rows
+// ─────────────────────────────────────────────
+const OBS_KIND_LABELS = {
+  'fire_v3': 'fire (actions)',
+  'skip_fuse': 'skip (L0 fuse)',
+  'skip_rejected': 'skip (rejected)',
+  'picker_invalid': 'picker invalid',
+  'secondary_concerns': 'secondary concerns',
+};
+function _isFireKind(k){ return typeof k === 'string' && k.indexOf('fire') === 0; }
+function _isSkipKind(k){ return typeof k === 'string' && k.indexOf('skip') === 0; }
+
+async function loadObservation(filter){
+  const rowsEl = el('obs-rows');
+  const countEl = el('obs-count');
+  if (!rowsEl) return;
+  let kindsParam = '';
+  if (filter === 'fire') kindsParam = 'fire_v3';
+  else if (filter === 'skip') kindsParam = 'skip_fuse,skip_rejected';
+  const url = '/api/mimir/diary_recent?hours=24&limit=100' + (kindsParam ? '&kinds=' + encodeURIComponent(kindsParam) : '');
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    const hits = (data && data.hits) || [];
+    if (countEl) countEl.textContent = hits.length + ' entries';
+    if (!hits.length){
+      rowsEl.innerHTML = '<div class="small" style="padding:12px;color:var(--text3)">No entries in the last 24h.</div>';
+      return;
+    }
+    rowsEl.innerHTML = hits.map((h, i) => {
+      const ts = h.ts ? fmtTimeAgo(h.ts) : '—';
+      const kind = h.kind || '';
+      const label = OBS_KIND_LABELS[kind] || kind;
+      const klass = _isFireKind(kind) ? 'obs-fire' : (_isSkipKind(kind) ? 'obs-skip' : 'obs-other');
+      const summary = (h.text || '').split('\n')[0].slice(0, 120);
+      const fullText = h.text || '';
+      const metaJson = h.meta ? JSON.stringify(h.meta, null, 2) : '';
+      return ''
+        + '<div class="obs-row ' + klass + '" data-obs-idx="' + i + '">'
+        +   '<div class="obs-row-summary">'
+        +     '<span class="obs-kind">' + esc(label) + '</span>'
+        +     '<span class="obs-ts">' + esc(ts) + '</span>'
+        +     '<span class="obs-text">' + esc(summary) + '</span>'
+        +   '</div>'
+        +   '<div class="obs-row-detail" style="display:none">'
+        +     (fullText ? '<pre class="obs-full">' + esc(fullText) + '</pre>' : '')
+        +     (metaJson ? '<details><summary>meta</summary><pre>' + esc(metaJson) + '</pre></details>' : '')
+        +   '</div>'
+        + '</div>';
+    }).join('');
+    rowsEl.querySelectorAll('.obs-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const det = row.querySelector('.obs-row-detail');
+        if (det) det.style.display = (det.style.display === 'none') ? '' : 'none';
+      });
+    });
+  } catch(e){
+    rowsEl.innerHTML = '<div class="small" style="padding:12px;color:#ff8a82">Failed: ' + esc(e.message) + '</div>';
+  }
+}
+
+async function loadActionDistribution(){
+  const rowsEl = el('action-dist-rows');
+  if (!rowsEl) return;
+  try {
+    const r = await fetch('/api/mimir/diary_action_distribution?hours=24');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    const by = (data && data.by_action) || {};
+    const total = (data && typeof data.total === 'number') ? data.total : 0;
+    const baseOrder = ['reflection','curation','tension','profile','fetch','library_fetch','outreach','skip'];
+    // Surface 'unknown' only when nonzero — it indicates back-fill of
+    // chosen_action failed (round-1 JSON missing from session_end payload).
+    const unknownN = (by.unknown && by.unknown.fire) || 0;
+    const order = unknownN > 0 ? [...baseOrder, 'unknown'] : baseOrder;
+    let maxN = 0;
+    order.forEach(a => {
+      const e2 = by[a] || { fire: 0 };
+      maxN = Math.max(maxN, e2.fire || 0);
+    });
+    if (maxN === 0) maxN = 1;
+    const headerHtml = (total === 0)
+      ? '<div class="small" style="padding:6px 0;color:#999">No picker fires in last 24h</div>'
+      : '<div class="small" style="padding:6px 0;color:#999">' + total + ' picker fires in last 24h</div>';
+    const bars = order.map(a => {
+      const e2 = by[a] || { fire: 0 };
+      const fire = e2.fire || 0;
+      const fireW = Math.round((fire / maxN) * 100);
+      const pct = total > 0 ? Math.round(100 * fire / total) : 0;
+      return ''
+        + '<div class="dist-row">'
+        +   '<div class="dist-label">' + esc(a) + '</div>'
+        +   '<div class="dist-bars">'
+        +     '<div class="dist-bar dist-fire" style="width:' + fireW + '%" title="' + fire + ' (' + pct + '%)"></div>'
+        +   '</div>'
+        +   '<div class="dist-counts">' + fire + (total > 0 ? ' (' + pct + '%)' : '') + '</div>'
+        + '</div>';
+    }).join('');
+    rowsEl.innerHTML = headerHtml + bars;
+  } catch(e){
+    rowsEl.innerHTML = '<div class="small" style="padding:12px;color:#ff8a82">Failed: ' + esc(e.message) + '</div>';
+  }
+}
+
+async function postConfig(body, label){
+  try {
+    const r = await fetch('/api/mimir/config', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+    toast((label || 'Saved') + ' ✓', 'ok');
+    return true;
+  } catch(e){
+    toast((label || 'Save') + ' failed: ' + e.message, 'err');
+    return false;
+  }
+}
+
+// ─────────────────────────────────────────────
+// Foolproof autoroute + master-switch guidance flow
+// ─────────────────────────────────────────────
+function _setGuidanceMode(on){
+  const p = el('panel-actions');
+  if (p) p.classList.toggle('guidance-highlight', !!on);
+  const h = el('guidance-hint-actions');
+  if (h) h.classList.toggle('show', !!on);
+}
+async function _autorouteToActions(extra){
+  const body = Object.assign({}, extra || {});
+  if (!lastConfig || !lastConfig.curiosity_enabled) body.curiosity_enabled = true;
+  return body;
+}
+
+// ─────────────────────────────────────────────
+// Wiring
+// ─────────────────────────────────────────────
+function wireButtons(){
+  // Master switch (Curiosity) — guidance flow on turn-ON.
+  const tc = el('toggle-curiosity');
+  if (tc){
+    tc.addEventListener('click', async () => {
+      const turnOn = !tc.classList.contains('on');
+      const ok = await postConfig({ curiosity_enabled: turnOn }, 'Curiosity → ' + (turnOn ? 'on' : 'off'));
+      if (!ok) return;
+      _setGuidanceMode(turnOn);
+      loadConfig();
+    });
+  }
+  // MD archive — plain toggle, no guidance
+  const tm = el('toggle-md-archive');
+  if (tm){
+    tm.addEventListener('click', async () => {
+      const turnOn = !tm.classList.contains('on');
+      const ok = await postConfig({ md_archive_enabled: turnOn }, 'MD archive → ' + (turnOn ? 'on' : 'off'));
+      if (ok) loadConfig();
+    });
+  }
+  // Silence outputs — mutes Telegram + dashboard chat broadcasts; observation
+  // panel keeps recording. Crash-survives via *_user_explicit pattern.
+  const ts = el('toggle-silence');
+  if (ts){
+    ts.addEventListener('click', async () => {
+      const turnOn = !ts.classList.contains('on');
+      const ok = await postConfig(
+        { autonomy_silence_outputs: turnOn },
+        'Silence → ' + (turnOn ? 'on' : 'off'),
+      );
+      if (ok) loadConfig();
+    });
+  }
+  // Observation panel filter buttons + manual refresh
+  document.querySelectorAll('[data-obs-filter]').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('[data-obs-filter]').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      loadObservation(b.dataset.obsFilter);
+    });
+  });
+  const obsRefresh = el('obs-refresh');
+  if (obsRefresh){
+    obsRefresh.addEventListener('click', () => {
+      const active = document.querySelector('[data-obs-filter].active');
+      loadObservation(active ? active.dataset.obsFilter : 'all');
+      loadActionDistribution();
+    });
+  }
+
+  // Cap sliders — live label sync + dirty-flag
+  [
+    { sliderId: 'cap-slider',         displayId: 'cap-display' },
+    { sliderId: 'cap-fetch-slider',   displayId: 'cap-fetch-display' },
+    { sliderId: 'cap-profile-slider', displayId: 'cap-profile-display' },
+  ].forEach(({ sliderId, displayId }) => {
+    const s = el(sliderId);
+    if (!s) return;
+    s.addEventListener('input', () => {
+      const v = parseInt(s.value, 10);
+      el(displayId).textContent = v === 0 ? '∞' : v;
+      s.dataset.dirty = '1';
+    });
+  });
+
+  // Mark unsaved edits dirty so the 5s poll won't clobber typing
+  // (paid-tier license bypasses _gateIntercept, so we set the flag here)
+  ['quiet-start','quiet-end','quiet-tz','fetch-allowlist','expl-max','expl-cooldown','expl-context-mode'].forEach(id => {
+    const node = el(id);
+    if (!node) return;
+    const mark = () => { node.dataset.dirty = '1'; };
+    node.addEventListener('input', mark);
+    node.addEventListener('change', mark);
+  });
+  // Combined "Save caps" — only POSTs sliders the user actually touched
+  // (data-dirty=1). Preserves daemon-side defaults if the user hasn't
+  // moved a slider, so HTML-baked initial values never overwrite live cfg.
+  el('cap-save').addEventListener('click', async () => {
+    const body = {};
+    const out = el('cap-slider'),  fch = el('cap-fetch-slider'),  prf = el('cap-profile-slider');
+    const max = el('expl-max'),    cd  = el('expl-cooldown');
+    if (out && out.dataset.dirty) body.autonomy_v3_outreach_daily_cap = parseInt(out.value, 10);
+    if (fch && fch.dataset.dirty) body.fetch_daily_cap = parseInt(fch.value, 10);
+    if (prf && prf.dataset.dirty) body.profile_daily_cap = parseInt(prf.value, 10);
+    if (max && max.dataset.dirty) body.exploration_max_per_30min = parseInt(max.value, 10) || 3;
+    if (cd  && cd.dataset.dirty)  body.curiosity_cooldown_s     = parseInt(cd.value, 10)  || 600;
+    if (!Object.keys(body).length){ toast('No cap changes to save', 'ok'); return; }
+    const ok = await postConfig(body, 'Caps & cooldown');
+    if (ok) {
+      [out, fch, prf, max, cd].forEach(s => { if (s) delete s.dataset.dirty; });
+      loadConfig();
+    }
+  });
+
+  // Quiet hours
+  el('quiet-save').addEventListener('click', async () => {
+    const start = parseInt(el('quiet-start').value, 10);
+    const end = parseInt(el('quiet-end').value, 10);
+    const tz = el('quiet-tz').value.trim();
+    const body = {};
+    if (Number.isFinite(start)) body.autonomy_quiet_start_hour = start;
+    if (Number.isFinite(end))   body.autonomy_quiet_end_hour = end;
+    body.autonomy_quiet_tz = tz;
+    if (await postConfig(body, 'Quiet hours')){
+      ['quiet-start','quiet-end','quiet-tz'].forEach(id => { const e = el(id); if (e) delete e.dataset.dirty; });
+      loadConfig();
+    }
+  });
+
+  // Context mode (Panel A) — auto-commit on change since it's a single select
+  // with no dedicated Save button.
+  el('expl-context-mode').addEventListener('change', async () => {
+    if (await postConfig({ exploration_context_mode: el('expl-context-mode').value }, 'Context mode')) {
+      delete el('expl-context-mode').dataset.dirty;
+      loadConfig();
+    }
+  });
+
+  // Allowlist
+  el('allowlist-save').addEventListener('click', async () => {
+    const lines = el('fetch-allowlist').value.split('\n').map(s => s.trim()).filter(Boolean);
+    el('allowlist-err').style.display = 'none';
+    if (await postConfig({ autonomy_fetch_allowlist: lines }, 'Fetch allowlist')){
+      delete el('fetch-allowlist').dataset.dirty;
+      loadConfig();
+    }
+  });
+
+  // Kill switches
+  el('btn-kill-v3').addEventListener('click', async () => {
+    if (!confirm('Engage full kill? This clears all six action toggles AND turns master OFF.')) return;
+    const r1 = await postConfig({ curiosity_enabled: false }, 'Master off');
+    const r2 = await postConfig({ autonomy_v3_enabled_actions: [] }, 'Action toggles cleared');
+    if (r1 && r2) loadConfig();
+  });
+  el('btn-kill-outreach').addEventListener('click', async () => {
+    if (!confirm('Engage outreach kill? Mímir will stop messaging proactively.')) return;
+    if (await postConfig({ autonomy_outreach_kill: true }, 'Outreach kill')) loadConfig();
+  });
+  el('btn-clear-outreach').addEventListener('click', async () => {
+    if (await postConfig({ autonomy_outreach_kill: false }, 'Outreach kill cleared')) loadConfig();
+  });
+}
+
+// ─────────────────────────────────────────────
+// Visibility-Permission Gating (W8) — Lite users
+// see UI but commits go to subscribe modal in parent.
+// ─────────────────────────────────────────────
+window.__ceLicense = { active: false, loaded: false };
+fetch('/api/license/status').then(r => r.ok ? r.json() : null).then(j => {
+  if (j && typeof j.active === 'boolean') window.__ceLicense = Object.assign({ loaded: true }, j);
+  else window.__ceLicense.loaded = true;
+}).catch(() => { window.__ceLicense.loaded = true; });
+
+function _isInteractiveTarget(el){
+  if (!el) return false;
+  if (el.tagName === 'BUTTON') return true;
+  if (el.classList && el.classList.contains('toggle')) return true;
+  if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT') return true;
+  return false;
+}
+function _findInteractive(el){
+  while (el && el !== document.body){
+    if (_isInteractiveTarget(el)) return el;
+    el = el.parentElement;
+  }
+  return null;
+}
+function _gateIntercept(e){
+  if (window.__ceLicense && window.__ceLicense.active) return;
+  var t = e.target;
+  if (t && t.classList && t.classList.contains('tt-trigger')) return;
+  if (t && t.tagName === 'A') return;
+  var el = _findInteractive(t);
+  if (!el) return;
+  if (e.type === 'keydown' && e.key !== 'Enter') return;
+  if (e.type === 'input' || e.type === 'change'){
+    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.dataset.dirty = '1';
+  }
+  if (e.type === 'input') return;
+  e.stopImmediatePropagation();
+  e.preventDefault();
+  try {
+    parent.postMessage({ type: 'constellation:subscribe-gate', feature: 'mimir.advanced' }, location.origin);
+  } catch {}
+}
+document.addEventListener('click', _gateIntercept, true);
+document.addEventListener('change', _gateIntercept, true);
+document.addEventListener('input', _gateIntercept, true);
+document.addEventListener('keydown', _gateIntercept, true);
+
+// Skip-on-dirty: don't clobber unsaved typing
+const _origRenderTunables = renderTunables;
+renderTunables = function(autonomy, cfg){
+  const fields = ['quiet-start','quiet-end','quiet-tz','fetch-allowlist','expl-max','expl-cooldown','expl-context-mode'];
+  const before = {};
+  fields.forEach(id => {
+    const e = document.getElementById(id);
+    before[id] = e && e.dataset.dirty === '1' ? e.value : null;
+  });
+  _origRenderTunables(autonomy, cfg);
+  fields.forEach(id => {
+    if (before[id] !== null){
+      const e = document.getElementById(id);
+      if (e) e.value = before[id];
+    }
+  });
+};
+
+wireButtons();
+wireTooltips();
+_wirePoolSliders();
+loadConfig();
+pollColdStart();
+pollLicense();
+pollTimer = setInterval(loadConfig, POLL_MS);
+coldStartPollTimer = setInterval(pollColdStart, COLD_START_POLL_MS);
+licensePollTimer = setInterval(pollLicense, LICENSE_POLL_MS);
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden){
+    if (pollTimer){ clearInterval(pollTimer); pollTimer = null; }
+    if (coldStartPollTimer){ clearInterval(coldStartPollTimer); coldStartPollTimer = null; }
+    if (licensePollTimer){ clearInterval(licensePollTimer); licensePollTimer = null; }
+  } else {
+    loadConfig();
+    pollColdStart();
+    pollLicense();
+    if (!pollTimer) pollTimer = setInterval(loadConfig, POLL_MS);
+    if (!coldStartPollTimer) coldStartPollTimer = setInterval(pollColdStart, COLD_START_POLL_MS);
+    if (!licensePollTimer) licensePollTimer = setInterval(pollLicense, LICENSE_POLL_MS);
+  }
+});
+</script>
+</body>
+</html>

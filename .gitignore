@@ -1,0 +1,69 @@
+# Node.js
+node_modules/
+package-lock.json
+npm-debug.log
+.npm
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+secrets/
+
+# Runtime & Data
+data/
+logs/
+*.db
+*.db-shm
+*.db-wal
+*.log
+tmp/
+temp/
+.mimir-runtime.json
+snapshots/
+archive/
+config.json
+engine-inbox/uploads/
+engine-output/*
+!engine-output/.gitkeep
+
+# OS & Editor
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.classpath
+.project
+
+# Build artifacts
+dist/
+build/
+*.o
+*.so
+*.a
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Python cache (from migrate_memory.py / measure_import_pollution.py tooling)
+__pycache__/
+*.pyc
+
+# Backup files
+*.bak
+*.backup
+*.pre-*
+
+# IDE
+.eclipse/
+.vscode/settings.json
+.vscode/launch.json
+*.iml
+
+# OSS-only paths (electron/, src/oss/) are tracked here in this OSS folder.
+# They must NEVER sync back into the main repo's src/ tree.
+# That direction is enforced by ../scripts/oss-only.txt + the sync script;
+# .gitignore here exists only to keep build/runtime junk out of git.

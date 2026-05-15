@@ -1,0 +1,2954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Constellation — Setup</title>
+<style>
+  :root {
+    --bg-dark: #0b0e1a;
+    --bg-card: #131829;
+    --border-subtle: #232a45;
+    --accent: #f5c542;
+    --accent-warm: #d4af6a;
+    --text-bright: #e8eef9;
+    --text-muted: #8ea0c0;
+    --text-dim: #5c6c8e;
+    --ok: #6bcf7f;
+    --warn: #d4af6a;
+    --err: #ff6b6b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg-dark);
+    color: var(--text-bright);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+  }
+
+  /* ─── Header / progress rail ─── */
+  header {
+    padding: 24px 32px 16px 32px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .title-row {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+  .brand {
+    font-size: 14px;
+    letter-spacing: 0.32em;
+    color: var(--accent);
+    font-weight: 400;
+  }
+  .stage-name {
+    font-size: 18px;
+    color: var(--text-bright);
+    font-weight: 300;
+  }
+  .progress-rail {
+    display: flex;
+    gap: 4px;
+    height: 3px;
+  }
+  .progress-rail .seg {
+    flex: 1;
+    background: var(--border-subtle);
+    border-radius: 2px;
+    transition: background 0.3s ease;
+  }
+  .progress-rail .seg.done { background: var(--accent); }
+  .progress-rail .seg.active { background: var(--accent-warm); }
+
+  /* ─── Main stage area ─── */
+  main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 32px;
+  }
+  .stage {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  .stage h2 {
+    font-size: 24px;
+    font-weight: 300;
+    margin: 0 0 8px 0;
+  }
+  .stage .subtitle {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-bottom: 32px;
+    line-height: 1.5;
+  }
+
+  /* ─── Check rows (Stage 0) ─── */
+  .check-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .check-row {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .check-row.pending { opacity: 0.5; }
+  .check-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .check-icon.spin {
+    border: 2px solid var(--text-dim);
+    border-top-color: var(--accent);
+    animation: spin 1s linear infinite;
+  }
+  .check-icon.ok { background: var(--ok); color: #0b1a10; }
+  .check-icon.warn { background: var(--warn); color: #1a1308; }
+  .check-icon.err { background: var(--err); color: #1a0808; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .check-body { flex: 1; }
+  .check-name {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+  .check-detail {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+  .check-remediation {
+    font-size: 12px;
+    color: var(--err);
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+
+  /* ─── Footer / actions ─── */
+  footer {
+    padding: 20px 32px;
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .step-label {
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .footer-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .open-folder-link {
+    background: transparent;
+    border: 1px solid var(--border-subtle);
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+  }
+  .open-folder-link:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .actions {
+    display: flex;
+    gap: 12px;
+  }
+  button {
+    padding: 10px 22px;
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle);
+    background: transparent;
+    color: var(--text-bright);
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  button:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg-dark);
+  }
+  button.primary:hover:not(:disabled) {
+    background: #95b8ff;
+    color: var(--bg-dark);
+  }
+
+  /* ─── Stage 1/2/3 placeholders ─── */
+  .placeholder {
+    background: var(--bg-card);
+    border: 1px dashed var(--border-subtle);
+    border-radius: 6px;
+    padding: 40px;
+    text-align: center;
+    color: var(--text-muted);
+  }
+
+  /* ─── Stage 3 (LLM config) ─── */
+  .tier-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+  .tier-card {
+    position: relative;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .tier-card:hover { border-color: var(--accent); }
+  .tier-card.selected {
+    border-color: var(--accent-warm);
+    background: #1a2236;
+  }
+  .tier-card .tier-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-bright);
+    margin-bottom: 4px;
+  }
+  .tier-card .tier-desc {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+  .tier-card .tier-pill {
+    position: absolute;
+    top: -8px;
+    right: 10px;
+    background: var(--accent);
+    color: #0b0e1a;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    padding: 2px 8px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    box-shadow: 0 0 8px rgba(245, 197, 66, 0.35);
+  }
+  .setup-not-final-banner {
+    background: rgba(245, 197, 66, 0.08);
+    border-left: 2px solid var(--accent);
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.55;
+    padding: 10px 14px;
+    margin-bottom: 18px;
+    border-radius: 4px;
+  }
+  .setup-not-final-banner strong { color: var(--text-bright); }
+  .setup-not-final-banner em {
+    font-style: normal;
+    color: var(--accent-warm);
+  }
+  .slot-block {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    padding: 18px 20px;
+    margin-bottom: 14px;
+  }
+  .slot-header {
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 500;
+    margin-bottom: 10px;
+    letter-spacing: 0.04em;
+  }
+  .provider-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .prov-card {
+    background: #0e1325;
+    border: 1px solid var(--border-subtle);
+    border-radius: 5px;
+    padding: 10px 12px;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .prov-card:hover { border-color: var(--accent); }
+  .prov-card.selected {
+    border-color: var(--accent-warm);
+    background: #1a2236;
+  }
+  .prov-card .prov-icon { font-size: 18px; margin-bottom: 4px; }
+  .prov-card .prov-name { font-size: 12px; font-weight: 500; }
+  .prov-card .prov-tag {
+    display: inline-block;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    background: #21262d;
+    color: var(--text-muted);
+    margin-top: 4px;
+    letter-spacing: 0.04em;
+  }
+  .prov-card .prov-subtitle {
+    font-size: 10px;
+    color: var(--text-muted);
+    line-height: 1.35;
+    margin-top: 6px;
+  }
+  .field-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .field-row label {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .field-row input, .field-row select {
+    background: #0a0e1c;
+    color: var(--text-bright);
+    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-family: inherit;
+  }
+  .field-row input:focus, .field-row select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .field-row input[type=password] {
+    font-family: Menlo, Monaco, monospace;
+    letter-spacing: 0.04em;
+  }
+  .field-row .help {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+  .field-row .help a { color: var(--accent); cursor: pointer; }
+  .field-row .help a:hover { text-decoration: underline; }
+  .test-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    background: #0a0e1c;
+    border: 1px solid var(--border-subtle);
+    font-size: 12px;
+  }
+  .test-row.ok { border-color: var(--ok); }
+  .test-row.err { border-color: var(--err); }
+  .test-row.busy { border-color: var(--accent); }
+  .test-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    flex-shrink: 0;
+  }
+  .test-row.ok .test-dot   { background: var(--ok); }
+  .test-row.err .test-dot  { background: var(--err); }
+  .test-row.busy .test-dot { background: var(--warn); animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .test-row .test-text { flex: 1; line-height: 1.4; }
+  .test-row .test-lat {
+    color: var(--text-muted);
+    font-family: Menlo, Monaco, monospace;
+    font-size: 11px;
+  }
+  .btn-inline {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  .role-grid {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 6px 14px;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 10px;
+  }
+  .role-grid .rn { color: var(--text-bright); font-weight: 500; }
+  .alert {
+    padding: 10px 12px;
+    border-radius: 4px;
+    margin: 10px 0;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .alert.warn { background: #2d2410; color: #e3b341; border: 1px solid #5c4a16; }
+  .alert.info { background: #0d2237; color: #7dc7ff; border: 1px solid #1f3e5a; }
+
+  /* ─── Stage 1 (component download) ─── */
+  .download-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .download-row {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    padding: 16px 20px;
+  }
+  .download-row.done    { border-color: var(--ok); }
+  .download-row.failed  { border-color: var(--err); }
+  .download-row.active  { border-color: var(--accent); }
+  .download-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+  .download-title {
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .download-mirror {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.04em;
+  }
+  .progress-bar {
+    height: 6px;
+    background: var(--border-subtle);
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 8px 0;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.25s ease;
+  }
+  .download-row.done .progress-fill   { background: var(--ok); }
+  .download-row.failed .progress-fill { background: var(--err); }
+  .download-meta {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    justify-content: space-between;
+  }
+  .download-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .download-actions button {
+    padding: 4px 12px;
+    font-size: 12px;
+  }
+  .download-error {
+    font-size: 12px;
+    color: var(--err);
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+
+  /* ─── Stage 4 (engine startup) ─── */
+  .boot-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .boot-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-size: 13px;
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+  .boot-row[data-state="active"] { color: var(--text-bright); border-color: var(--accent); }
+  .boot-row[data-state="done"]   { color: var(--text-muted); border-color: var(--ok); }
+  .boot-row[data-state="fail"]   { color: var(--err); border-color: var(--err); }
+  .boot-icon {
+    width: 18px; height: 18px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: 2px solid var(--text-dim);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+  }
+  .boot-row[data-state="active"] .boot-icon {
+    border-color: var(--accent);
+    border-top-color: transparent;
+    animation: spin 1s linear infinite;
+  }
+  .boot-row[data-state="done"] .boot-icon {
+    background: var(--ok);
+    border-color: var(--ok);
+    color: #0b1a10;
+  }
+  .boot-row[data-state="done"] .boot-icon::after { content: '✓'; }
+  .boot-row[data-state="fail"] .boot-icon {
+    background: var(--err);
+    border-color: var(--err);
+    color: #1a0808;
+  }
+  .boot-row[data-state="fail"] .boot-icon::after { content: '✕'; }
+  .boot-fail {
+    margin-top: 22px;
+    padding: 16px;
+    background: rgba(255, 107, 107, 0.06);
+    border: 1px solid rgba(255, 107, 107, 0.4);
+    border-radius: 6px;
+  }
+  .boot-fail-title {
+    color: var(--err);
+    font-weight: 500;
+    margin-bottom: 8px;
+    font-size: 14px;
+  }
+  .boot-fail-msg {
+    color: var(--text-muted);
+    font-size: 12px;
+    margin-bottom: 14px;
+    font-family: Menlo, Monaco, monospace;
+    max-height: 140px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: var(--bg-dark);
+    padding: 8px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle);
+  }
+  .boot-fail-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .boot-fail-actions button {
+    padding: 6px 14px;
+    font-size: 12px;
+  }
+
+  /* ─── Stage 7 (Quick Quiz) ─── */
+  .quiz-section {
+    margin-top: 8px;
+  }
+  .quiz-section .quiz-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .quiz-section .quiz-hint {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+    line-height: 1.5;
+  }
+  .chip-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+  .chip {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 18px;
+    padding: 8px 16px;
+    font-size: 13px;
+    color: var(--text-bright);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    user-select: none;
+  }
+  .chip:hover { border-color: var(--accent); }
+  .chip.selected {
+    border-color: var(--accent-warm);
+    background: #1a2236;
+    color: var(--accent-warm);
+  }
+  .quiz-section textarea {
+    width: 100%;
+    background: #0a0e1c;
+    color: var(--text-bright);
+    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
+    padding: 10px 12px;
+    font-size: 13px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 64px;
+  }
+  .quiz-section textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .quiz-status {
+    margin-top: 14px;
+    font-size: 12px;
+    color: var(--text-muted);
+    min-height: 16px;
+  }
+  .quiz-status.err { color: var(--err); }
+  .quiz-status.ok  { color: var(--ok); }
+
+  /* ─── Stage 8/9 options & forms ─── */
+  .option-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .checkbox-option {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    cursor: pointer;
+  }
+  .checkbox-option input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    margin: 0;
+  }
+  .checkbox-label {
+    font-size: 14px;
+    color: var(--text-bright);
+    font-weight: 500;
+  }
+  .checkbox-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .setup-hint {
+    font-size: 13px;
+    color: var(--text-bright);
+    font-weight: 500;
+    margin-bottom: 12px;
+  }
+  .setup-steps {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin: 12px 0;
+    padding-left: 20px;
+    line-height: 1.6;
+  }
+  .setup-steps li {
+    margin-bottom: 8px;
+  }
+  .telegram-code-section {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+    margin-bottom: 14px;
+  }
+  .telegram-code-section input {
+    flex: 1;
+    padding: 10px 12px;
+    background: #0a0e1c;
+    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
+    color: var(--text-bright);
+    font-family: monospace;
+    font-size: 13px;
+  }
+  .telegram-code-section input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .status-message {
+    font-size: 12px;
+    color: var(--text-muted);
+    min-height: 16px;
+    margin-top: 10px;
+  }
+  .status-message.err { color: var(--err); }
+  .status-message.ok  { color: var(--ok); }
+  button.secondary {
+    background: transparent;
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  button.secondary:hover:not(:disabled) {
+    background: rgba(125, 163, 255, 0.1);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title-row">
+    <span class="brand">CONSTELLATION</span>
+    <span class="stage-name" id="stage-name">Environment Check</span>
+  </div>
+  <div class="progress-rail" id="progress-rail">
+    <!-- 10 segments injected by JS -->
+  </div>
+</header>
+
+<main>
+  <div class="stage" id="stage-content">
+
+    <!-- ─── Returning-user skip (rendered only when launched with
+         ?versionMigrating=1, i.e. the install/upgrade gate fired in
+         electron/main.js Phase 2). Bypasses the wizard entirely and
+         writes the current app_version to the sentinel. ────────── -->
+    <div id="version-skip-banner" hidden data-banner-style="
+      max-width:720px;margin:0 auto 24px auto;
+      background:rgba(245,197,66,0.08);border:1px solid rgba(245,197,66,0.3);
+      border-radius:6px;padding:14px 18px;display:flex;align-items:center;gap:14px">
+      <div style="flex:1;font-size:13px;line-height:1.5">
+        <strong style="color:#f5c542">Returning user?</strong>
+        <span style="color:#8ea0c0">Your existing config and data are still here. Skip the tutorial and go straight to the dashboard.</span>
+      </div>
+      <button type="button" id="version-skip-btn" class="secondary" style="padding:8px 18px">
+        Skip — I have existing data
+      </button>
+    </div>
+
+    <!-- ─── Stage 0: env-check ──────────────────────────────────── -->
+    <section data-stage="0">
+      <h2>Let's make sure your machine is ready.</h2>
+      <p class="subtitle">
+        Constellation needs a few things to run well.
+        We'll check them now and tell you what to fix if anything's off.
+      </p>
+      <div class="check-list" id="check-list">
+        <div class="check-row pending" data-name="node_version">
+          <span class="check-icon spin"></span>
+          <div class="check-body">
+            <div class="check-name">Node.js runtime</div>
+            <div class="check-detail">Checking…</div>
+          </div>
+        </div>
+        <div class="check-row pending" data-name="port_available">
+          <span class="check-icon spin"></span>
+          <div class="check-body">
+            <div class="check-name">Engine port</div>
+            <div class="check-detail">Checking…</div>
+          </div>
+        </div>
+        <div class="check-row pending" data-name="disk_space">
+          <span class="check-icon spin"></span>
+          <div class="check-body">
+            <div class="check-name">Disk space</div>
+            <div class="check-detail">Checking…</div>
+          </div>
+        </div>
+        <div class="check-row pending" data-name="ram">
+          <span class="check-icon spin"></span>
+          <div class="check-body">
+            <div class="check-name">Memory</div>
+            <div class="check-detail">Checking…</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Stage 1: component download ─────────────────────────── -->
+    <section data-stage="1" hidden>
+      <h2>Downloading the pieces Constellation needs.</h2>
+      <p class="subtitle">
+        This only happens the first time. We'll grab the embedding model,
+        reranker, and vector index. If a mirror is slow or blocked, we'll
+        automatically try the next one.
+      </p>
+      <div class="download-list" id="download-list"></div>
+    </section>
+
+    <!-- ─── Stage 3: LLM configuration ──────────────────────────── -->
+    <!-- (Stage 2 is the verify step folded into Stage 1; this is the "Step 4" UI.) -->
+    <section data-stage="3" hidden>
+      <h2>Pick the AI that powers Constellation.</h2>
+      <p class="subtitle">
+        Constellation talks to a Large Language Model — yours, you bring it.
+        Pick a provider, paste an API key, and test the connection.
+      </p>
+
+      <div class="setup-not-final-banner">
+        <strong>Setup isn't final.</strong>
+        You can change any of these later in <em>Settings</em>, or just ask the agent to help you reconfigure once it's running.
+      </div>
+
+      <div class="tier-row" id="tier-row">
+        <div class="tier-card" data-tier="simple">
+          <span class="tier-pill">Recommended for first-time</span>
+          <div class="tier-name">Simple</div>
+          <div class="tier-desc">One provider, one model, all 4 internal roles. Easiest start.</div>
+        </div>
+        <div class="tier-card" data-tier="advanced">
+          <div class="tier-name">Advanced</div>
+          <div class="tier-desc">Two slots: smart Main for chat, fast Secondary for memory + workers.</div>
+        </div>
+        <div class="tier-card" data-tier="expert">
+          <div class="tier-name">Expert</div>
+          <div class="tier-desc">Pick a model per role (4 roles). Maximum control, more typing.</div>
+        </div>
+      </div>
+
+      <div id="slots-container"></div>
+
+      <details style="margin-top:14px">
+        <summary style="cursor:pointer; color:var(--text-muted); font-size:12px;">What are these 4 roles?</summary>
+        <div class="role-grid">
+          <span class="rn">Main</span>          <span>User chat — every message hits this. Pick the smartest model.</span>
+          <span class="rn">Consolidation</span> <span>Memory hygiene — distill, dream, FUSE/SUPERSEDE. Wants reasoning depth.</span>
+          <span class="rn">Anamnesis</span>     <span>Per-session debrief over long context. Cheap &amp; fast wins.</span>
+          <span class="rn">Explore / Cron / Worker</span> <span>Autonomous exploration, cron jobs, sub-agents. Balanced middle tier.</span>
+        </div>
+      </details>
+
+      <div class="status-message" id="llm-save-status" style="margin-top:12px"></div>
+    </section>
+
+    <!-- ─── Stage 4: engine startup ────────────────────────────── -->
+    <section data-stage="4" hidden>
+      <h2>Starting Constellation.</h2>
+      <p class="subtitle">
+        First launch can take 5–30 seconds. We're loading the database,
+        warming the embedding model, and checking the LLM provider you just
+        configured. Future launches are much faster.
+      </p>
+
+      <div class="boot-progress" id="boot-progress">
+        <div class="boot-row" data-phase="spawn" data-state="idle">
+          <span class="boot-icon"></span>
+          <span class="boot-label">Starting engine process…</span>
+        </div>
+        <div class="boot-row" data-phase="db" data-state="idle">
+          <span class="boot-icon"></span>
+          <span class="boot-label">Loading database &amp; embeddings…</span>
+        </div>
+        <div class="boot-row" data-phase="llm" data-state="idle">
+          <span class="boot-icon"></span>
+          <span class="boot-label">Connecting to LLM provider…</span>
+        </div>
+        <div class="boot-row" data-phase="warmup" data-state="idle">
+          <span class="boot-icon"></span>
+          <span class="boot-label">Warming up models (first run is slower)…</span>
+        </div>
+        <div class="boot-row" data-phase="ready" data-state="idle">
+          <span class="boot-icon"></span>
+          <span class="boot-label">Ready</span>
+        </div>
+      </div>
+
+      <div class="boot-fail" id="boot-fail" hidden>
+        <div class="boot-fail-title">Engine failed to start.</div>
+        <div class="boot-fail-msg" id="boot-fail-msg"></div>
+        <div class="boot-fail-actions">
+          <button id="btn-boot-logs">View logs</button>
+          <button id="btn-boot-open-folder">Open engine folder</button>
+          <button id="btn-boot-report">Report issue</button>
+          <button id="btn-boot-edit-llm">Edit LLM Config</button>
+          <button id="btn-boot-retry" class="primary">Retry</button>
+          <button id="btn-boot-reset">Reset wizard</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Stage 7: Quick Quiz (interest seed) ─────────────────── -->
+    <!-- Stages 5/6 (First Conversation, Soul Core) live in the dashboard, -->
+    <!-- not the wizard. Stage 7 runs in the wizard so a one-shot seed is  -->
+    <!-- captured before the user even sees the dashboard — Mímir's        -->
+    <!-- bootstrap fetch loop reads autonomy_seeds on first run.           -->
+    <section data-stage="7" hidden>
+      <h2>What are you curious about?</h2>
+      <p class="subtitle">
+        Pick a few topics you'd like Constellation to explore on your behalf.
+        This is optional — and you can change it any time in Settings. We use
+        it as a starting hint when autonomous exploration is enabled.
+      </p>
+
+      <div class="quiz-section">
+        <div class="quiz-label">Pick any that fit (multi-select)</div>
+        <div class="chip-grid" id="chip-grid">
+          <div class="chip" data-tag="coding">Coding</div>
+          <div class="chip" data-tag="ai-ml">AI &amp; ML</div>
+          <div class="chip" data-tag="open-source">Open Source</div>
+          <div class="chip" data-tag="systems">Systems &amp; Infra</div>
+          <div class="chip" data-tag="security">Security</div>
+
+          <div class="chip" data-tag="science">Science</div>
+          <div class="chip" data-tag="mathematics">Mathematics</div>
+          <div class="chip" data-tag="philosophy">Philosophy</div>
+          <div class="chip" data-tag="psychology">Psychology</div>
+          <div class="chip" data-tag="history">History</div>
+
+          <div class="chip" data-tag="games">Games</div>
+          <div class="chip" data-tag="creative-writing">Creative Writing</div>
+          <div class="chip" data-tag="art-design">Art &amp; Design</div>
+          <div class="chip" data-tag="music">Music</div>
+          <div class="chip" data-tag="film-tv">Film &amp; TV</div>
+
+          <div class="chip" data-tag="economics">Economics</div>
+          <div class="chip" data-tag="entrepreneurship">Entrepreneurship</div>
+          <div class="chip" data-tag="finance">Finance</div>
+          <div class="chip" data-tag="productivity">Productivity</div>
+          <div class="chip" data-tag="career">Career</div>
+
+          <div class="chip" data-tag="health">Health</div>
+          <div class="chip" data-tag="cooking">Cooking</div>
+          <div class="chip" data-tag="travel">Travel</div>
+          <div class="chip" data-tag="languages">Languages</div>
+          <div class="chip" data-tag="reading">Reading</div>
+        </div>
+
+        <div class="quiz-label" style="margin-top:8px">Anything else? (optional)</div>
+        <p class="quiz-hint">
+          A sentence or two about what you're working on, hobbies, fields you
+          care about. Free-form. 280 characters max.
+        </p>
+        <textarea id="quiz-freetext" maxlength="280" rows="3"
+                  placeholder="e.g. building a small game studio; reading about climate adaptation; learning Mandarin"></textarea>
+
+        <div class="quiz-status" id="quiz-status"></div>
+      </div>
+    </section>
+
+    <section data-stage="8" hidden>
+      <h2>System Notifications</h2>
+      <p class="subtitle">
+        Get notified when important events happen — completion of autonomous explorations,
+        new insights discovered, or when the engine needs your attention.
+      </p>
+
+      <div class="option-section">
+        <label class="checkbox-option">
+          <input type="checkbox" id="enable-notifications" />
+          <span class="checkbox-label">Enable system notifications</span>
+          <span class="checkbox-hint">You can change this anytime in Settings</span>
+        </label>
+      </div>
+
+      <div id="notification-status" class="status-message"></div>
+    </section>
+
+    <section data-stage="9" hidden>
+      <h2>Telegram Alerts (Optional)</h2>
+      <p class="subtitle">
+        Constellation can chat with you on Telegram and send proactive nudges
+        when it has something to share. Setup is self-hosted — your bot, your
+        token, your data. Skip this if you'd rather use the desktop app only.
+      </p>
+
+      <div class="option-section" style="background:rgba(255, 200, 60, 0.08); border:1px solid rgba(255, 200, 60, 0.3); border-radius:6px; padding:0.75em 1em; margin-bottom:1em;">
+        <p style="font-size:0.85em; line-height:1.5; margin:0; color:var(--text2, #b8bcbf);">
+          <strong style="color:#ffd080;">Heads-up:</strong> Enabling Telegram routes your
+          bot token, conversation messages, and any media you send through
+          <strong>Telegram Messenger LLC</strong>'s servers. Telegram is a third-party service
+          we do not control. Their
+          <a href="#" id="telegram-tos-link" style="color:#67c1f5; text-decoration:underline;">Terms of Service</a>
+          and
+          <a href="#" id="telegram-privacy-link" style="color:#67c1f5; text-decoration:underline;">Privacy Policy</a>
+          apply to all data you send. Skip this stage to keep everything local.
+        </p>
+      </div>
+
+      <div class="option-section">
+        <p class="setup-hint">Step 1 — Create a bot with BotFather:</p>
+        <ol class="setup-steps">
+          <li>Open Telegram and search for <strong>@BotFather</strong> (the official one with a verified checkmark).</li>
+          <li>Send <code>/newbot</code> and follow the prompts: pick a display name, then a username ending in <code>bot</code>.</li>
+          <li>BotFather replies with a token that looks like <code>1234567890:AAH...</code>. Copy it.</li>
+        </ol>
+        <button id="telegram-open-botfather" class="secondary">Open BotFather</button>
+      </div>
+
+      <div class="option-section">
+        <p class="setup-hint">Step 2 — Paste the token here:</p>
+        <input type="text" id="telegram-token" placeholder="1234567890:AAH..." style="width:100%;font-family:monospace;" />
+        <div style="margin-top:0.5em;">
+          <button id="telegram-test-token" class="secondary">Test token</button>
+          <span id="telegram-token-status" class="checkbox-hint" style="margin-left:0.6em;"></span>
+        </div>
+      </div>
+
+      <div class="option-section" id="telegram-step3" hidden>
+        <p class="setup-hint">Step 3 — Find your chat ID:</p>
+        <ol class="setup-steps">
+          <li>Open your new bot in Telegram (BotFather gave you a link starting with <code>t.me/</code>).</li>
+          <li>Send any message to it (a simple "hi" works).</li>
+          <li>Click below — we'll fetch the chat ID from Telegram's update feed.</li>
+        </ol>
+        <button id="telegram-fetch-chatid" class="secondary">Fetch chat ID</button>
+        <span id="telegram-chatid-status" class="checkbox-hint" style="margin-left:0.6em;"></span>
+        <div style="margin-top:0.4em;">
+          <input type="text" id="telegram-chatid" placeholder="(detected automatically)" style="width:100%;font-family:monospace;" />
+        </div>
+      </div>
+
+      <div class="option-section" id="telegram-step4" hidden>
+        <p class="setup-hint">Step 4 — Save and send a test message:</p>
+        <button id="telegram-save" class="primary">Save &amp; test</button>
+        <div id="telegram-status" class="status-message" style="margin-top:0.5em;"></div>
+      </div>
+
+      <div class="option-section">
+        <label class="checkbox-option">
+          <input type="checkbox" id="skip-telegram" />
+          <span class="checkbox-label">Skip — set this up later in Settings</span>
+          <span class="checkbox-hint">You can always enable Telegram from Settings → Telegram.</span>
+        </label>
+      </div>
+    </section>
+
+    <section data-stage="10" hidden id="stage-10-section" style="position:relative;">
+      <h2>Moving Day — Bring Your Memory With You</h2>
+      <p class="subtitle">
+        Coming from another assistant? Drop in <code>.md</code> /
+        <code>.txt</code> / <code>.docx</code> notes — journals, project
+        briefs, conversations you've exported, anything text. Pick a whole
+        folder, multi-select files, or drag-and-drop right here.
+        Constellation reads each one, builds memory nodes, and links them
+        into your star map so the very first conversation already feels
+        like it knows you. Skip if you'd rather start clean — you can do
+        this any time from Settings.
+      </p>
+
+      <div class="option-section">
+        <button id="btn-pick-folder" class="secondary">Pick folder…</button>
+        <button id="btn-pick-files" class="secondary" style="margin-left:0.4em;">Pick files…</button>
+        <span id="picked-folder" class="checkbox-hint" style="margin-left:0.6em;"></span>
+      </div>
+      <div id="wizard-drop-overlay" style="display:none;position:absolute;inset:0;background:rgba(30,120,220,0.15);border:2px dashed #4ea1ff;color:#dfe9ff;align-items:center;justify-content:center;font-size:1.4em;z-index:50;pointer-events:none;">Drop notes here</div>
+
+      <div id="import-preview" class="option-section" hidden>
+        <div id="import-stats" class="status-message"></div>
+        <div id="import-samples" class="checkbox-hint" style="white-space:pre-wrap;"></div>
+        <div id="import-quarantine" class="status-message" hidden></div>
+
+        <div class="option-section">
+          <label class="checkbox-option">
+            <input type="radio" name="import-route" value="A" checked />
+            <span class="checkbox-label">Quick Import</span>
+            <span class="checkbox-hint">Heuristic — no LLM calls, fastest, free.</span>
+          </label>
+          <label class="checkbox-option">
+            <input type="radio" name="import-route" value="B" />
+            <span class="checkbox-label">Agent-Guided Import</span>
+            <span class="checkbox-hint" id="route-b-hint">LLM reads each note for richer titles + connections.</span>
+          </label>
+        </div>
+
+        <div class="option-section" id="b-advanced-wrap" hidden>
+          <a href="javascript:void(0)" id="show-b-advanced" class="checkbox-hint">Show advanced…</a>
+          <div id="b-advanced" hidden style="margin-top:0.4em;">
+            <label class="checkbox-option">
+              <input type="checkbox" id="b-cap-override" />
+              <span class="checkbox-label">Allow up to 500 files</span>
+              <span class="checkbox-hint">Default cap is 200 files for Agent-Guided imports.</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="option-section">
+          <button id="btn-run-import" class="primary">Import now</button>
+        </div>
+      </div>
+
+      <div id="import-progress" class="option-section" hidden>
+        <div id="import-progress-text" class="status-message"></div>
+      </div>
+
+      <div id="import-result" class="option-section" hidden>
+        <div id="import-result-text" class="status-message ok"></div>
+      </div>
+
+      <div class="option-section">
+        <label class="checkbox-option">
+          <input type="checkbox" id="skip-import" />
+          <span class="checkbox-label">Skip — I'll import later in Settings</span>
+        </label>
+      </div>
+    </section>
+
+    <section data-stage="11" hidden>
+      <h2>Refine Your Soul Core</h2>
+      <p class="subtitle">
+        Your agent has read the imported memories. It can re-write your Soul Core
+        with deeper context drawn from your own notes — or you can keep what you
+        wrote in Stage 6.
+      </p>
+
+      <div class="option-section">
+        <button id="btn-soul-core-draft" class="secondary">Generate Draft</button>
+        <span id="soul-core-status" class="checkbox-hint" style="margin-left:0.6em;"></span>
+      </div>
+
+      <div id="soul-core-segments" class="option-section" hidden>
+        <div class="option-section">
+          <label class="checkbox-label" for="sc-name">Who you are</label>
+          <textarea id="sc-name" rows="3" style="width:100%;"></textarea>
+        </div>
+        <div class="option-section">
+          <label class="checkbox-label" for="sc-values">What you value</label>
+          <textarea id="sc-values" rows="3" style="width:100%;"></textarea>
+        </div>
+        <div class="option-section">
+          <label class="checkbox-label" for="sc-direction">Where you're going</label>
+          <textarea id="sc-direction" rows="3" style="width:100%;"></textarea>
+        </div>
+        <div class="option-section">
+          <label class="checkbox-label" for="sc-relationship">How you want to be known</label>
+          <textarea id="sc-relationship" rows="3" style="width:100%;"></textarea>
+        </div>
+
+        <div class="option-section">
+          <button id="btn-soul-core-save" class="primary">Save & Finish</button>
+        </div>
+      </div>
+
+      <div class="option-section">
+        <label class="checkbox-option">
+          <input type="checkbox" id="skip-soul-core-refine" />
+          <span class="checkbox-label">Skip — keep my Stage 6 answers</span>
+        </label>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<footer>
+  <div class="footer-left">
+    <span class="step-label" id="step-label">Step 1 of 9 · Environment Check</span>
+    <button type="button" class="open-folder-link" id="btn-open-engine-folder" title="Opens the folder that holds constellation.db and your config — handy if you need to browse or back up engine data.">Open engine folder</button>
+  </div>
+  <div class="actions">
+    <button id="btn-prev" type="button" hidden>Previous</button>
+    <button id="btn-recheck">Re-check</button>
+    <button id="btn-next" class="primary" disabled>Continue</button>
+  </div>
+</footer>
+
+<script>
+  const STAGE_NAMES = [
+    'Environment Check',
+    'Component Download',
+    'Component Verify',
+    'LLM Configuration',
+    'Engine Startup',
+    'First Conversation',
+    'Soul Core',
+    'Quick Quiz',
+    'Dashboard Tour',
+    'Telegram (optional)',
+    'Memory Import (optional)',
+    'Soul Core Refinement',
+  ];
+
+  let currentStage = 0;
+  const btnNext    = document.getElementById('btn-next');
+  const btnPrev    = document.getElementById('btn-prev');
+  const btnRecheck = document.getElementById('btn-recheck');
+  const stageNameEl = document.getElementById('stage-name');
+  const stepLabelEl = document.getElementById('step-label');
+
+  // Version-migration skip path: launcher sets ?versionMigrating=1 on the
+  // wizard URL when the recorded sentinel app_version differs from the
+  // running app.getVersion(). Returning users with intact config click Skip
+  // and we just refresh the sentinel + open the dashboard.
+  (function setupVersionSkip() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('versionMigrating') !== '1') return;
+    const banner = document.getElementById('version-skip-banner');
+    const btn    = document.getElementById('version-skip-btn');
+    if (!banner || !btn) return;
+    // Apply the styled layout only when the banner is meant to show. Keeping
+    // display:flex on the element by default would override the `hidden`
+    // attribute (UA `display:none` loses to inline styles), so the banner
+    // would leak onto every wizard stage.
+    banner.style.cssText = banner.getAttribute('data-banner-style') || '';
+    banner.hidden = false;
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      btn.textContent = 'Booting engine…';
+      try {
+        const res = await window.constellation.versionSkipOnboarding();
+        if (!res || !res.ok) {
+          btn.disabled = false;
+          btn.textContent = 'Skip — I have existing data';
+          alert('Skip failed: ' + (res && res.error ? res.error : 'unknown'));
+        }
+        // On success the launcher closes this window and opens the dashboard.
+      } catch (e) {
+        btn.disabled = false;
+        btn.textContent = 'Skip — I have existing data';
+        alert('Skip failed: ' + e.message);
+      }
+    });
+  })();
+
+  // Stages where Previous is safe (no irreversible side effects on the stage
+  // we'd jump back into). Tour/Telegram/Memory-Import only render local UI;
+  // engine is already running. Stage 4 boot-failure has its own
+  // Edit-LLM-Config button (see btn-boot-edit-llm), so generic prev stays off
+  // there. Stages 0/1/3/5/6/7/11 don't have a meaningful prior state to
+  // restore.
+  const PREV_TARGET = { 8: 7, 9: 8, 10: 9 };
+
+  // Stages 2/5/6 are folded into adjacent stages and never render a section,
+  // so the user sees 9 panels — not 12. Show the step counter and progress
+  // rail in those terms while keeping internal stage numbers untouched.
+  const VISIBLE_STAGES = [0, 1, 3, 4, 7, 8, 9, 10, 11];
+  function stepOrdinal(stage) {
+    const idx = VISIBLE_STAGES.indexOf(stage);
+    return idx >= 0 ? idx + 1 : 1;
+  }
+
+  // ─── progress rail render ─────────────────────────────────────
+  function renderProgress(stage) {
+    const rail = document.getElementById('progress-rail');
+    rail.innerHTML = VISIBLE_STAGES.map(s => {
+      const cls = s < stage ? 'done' : (s === stage ? 'active' : '');
+      return `<div class="seg ${cls}"></div>`;
+    }).join('');
+  }
+
+  function showStage(stage) {
+    currentStage = stage;
+    document.querySelectorAll('section[data-stage]').forEach(s => {
+      s.hidden = parseInt(s.dataset.stage, 10) !== stage;
+    });
+    // Returning-user skip banner is only meaningful before the user starts
+    // the wizard. Once they advance past Stage 0, hide it for good. Clear
+    // the inline style first so `hidden` actually wins (UA display:none
+    // loses to any inline display rule).
+    const skipBanner = document.getElementById('version-skip-banner');
+    if (skipBanner && stage !== 0) {
+      skipBanner.style.cssText = 'display:none';
+      skipBanner.hidden = true;
+    }
+    stageNameEl.textContent = STAGE_NAMES[stage] || '';
+    stepLabelEl.textContent = `Step ${stepOrdinal(stage)} of ${VISIBLE_STAGES.length} · ${STAGE_NAMES[stage]}`;
+    renderProgress(stage);
+    btnPrev.hidden = !(stage in PREV_TARGET);
+    btnPrev.disabled = false;
+  }
+
+  // ─── Stage 0 ──────────────────────────────────────────────────
+  function detailText(name, detail) {
+    if (!detail) return '';
+    switch (name) {
+      case 'node_version':
+        return `Required ${detail.required}, you have v${detail.actual}.`;
+      case 'port_available':
+        if (detail.shifted) {
+          return `Port ${detail.requested} busy — using port ${detail.port} instead.`;
+        }
+        if (detail.tried && detail.tried.every(t => !t.ok)) {
+          return `Ports ${detail.port}–${detail.port + (detail.range || 10) - 1} all in use.`;
+        }
+        return `Port ${detail.port} is free.`;
+      case 'disk_space':
+        if (detail.warning) return detail.warning;
+        return `${detail.freeGB} GB free (need ${detail.requiredGB} GB).`;
+      case 'ram':
+        return `${detail.totalGB} GB total (recommend ${detail.requiredGB} GB+).`;
+      default:
+        return JSON.stringify(detail);
+    }
+  }
+
+  function paintCheckRow(name, check) {
+    const row = document.querySelector(`.check-row[data-name="${name}"]`);
+    if (!row) return;
+    row.classList.remove('pending');
+    const icon = row.querySelector('.check-icon');
+    icon.classList.remove('spin', 'ok', 'warn', 'err');
+    if (check.ok) {
+      icon.classList.add('ok'); icon.textContent = '✓';
+    } else if (name === 'ram') {
+      icon.classList.add('warn'); icon.textContent = '!';
+    } else {
+      icon.classList.add('err'); icon.textContent = '✕';
+    }
+    row.querySelector('.check-detail').textContent = detailText(name, check.detail);
+    const existing = row.querySelector('.check-remediation');
+    if (existing) existing.remove();
+    if (check.remediation) {
+      const rem = document.createElement('div');
+      rem.className = 'check-remediation';
+      rem.textContent = check.remediation;
+      row.querySelector('.check-body').appendChild(rem);
+    }
+  }
+
+  async function runEnvCheck() {
+    btnNext.disabled = true;
+    document.querySelectorAll('.check-row').forEach(r => {
+      r.classList.add('pending');
+      const icon = r.querySelector('.check-icon');
+      icon.className = 'check-icon spin';
+      icon.textContent = '';
+      r.querySelector('.check-detail').textContent = 'Checking…';
+      const rem = r.querySelector('.check-remediation');
+      if (rem) rem.remove();
+    });
+
+    const result = await window.constellation.envCheck();
+    for (const c of result.checks) paintCheckRow(c.name, c);
+    btnNext.disabled = !result.ok;
+  }
+
+  // ─── Stage 1: component download ──────────────────────────────
+  const downloadState = new Map();   // componentId → { state, mirrorIndex, pendingRestart? }
+
+  function escHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  function fmtBytes(n) {
+    if (!n) return '0 B';
+    const u = ['B','KB','MB','GB'];
+    let i = 0; let v = n;
+    while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; }
+    return `${v.toFixed(v < 10 ? 1 : 0)} ${u[i]}`;
+  }
+  function fmtSpeed(bps) { return bps > 0 ? `${fmtBytes(bps)}/s` : '—'; }
+  function fmtEta(s) {
+    if (!s || !isFinite(s) || s <= 0) return '—';
+    if (s < 60)   return `${Math.round(s)} s`;
+    if (s < 3600) return `${Math.round(s / 60)} min`;
+    return `${(s / 3600).toFixed(1)} h`;
+  }
+
+  function renderDownloadRows(components) {
+    const list = document.getElementById('download-list');
+    list.innerHTML = components.map(c => `
+      <div class="download-row${c.installed ? ' done' : ''}" id="dlrow-${escHtml(c.id)}" data-component="${escHtml(c.id)}">
+        <div class="download-head">
+          <div>
+            <div class="download-title">${escHtml(c.displayName)}</div>
+            <div class="download-mirror" id="dlmirror-${escHtml(c.id)}">${c.installed ? 'already installed' : 'queued'}</div>
+          </div>
+          <div class="download-meta" id="dlpct-${escHtml(c.id)}">${c.installed ? '100%' : '0%'}</div>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="dlfill-${escHtml(c.id)}" style="width:${c.installed ? 100 : 0}%"></div></div>
+        <div class="download-meta">
+          <span id="dlbytes-${escHtml(c.id)}">${c.installed ? `${fmtBytes(c.approxBytes)} / ${fmtBytes(c.approxBytes)}` : `0 / ~${fmtBytes(c.approxBytes)}`}</span>
+          <span id="dlrate-${escHtml(c.id)}">${c.installed ? '—' : ''}</span>
+        </div>
+        <div class="download-actions" id="dlact-${escHtml(c.id)}" ${c.installed ? 'hidden' : ''}>
+          <button type="button" data-action="cancel" data-component="${escHtml(c.id)}">Cancel</button>
+          <button type="button" data-action="switch" data-component="${escHtml(c.id)}">Switch mirror</button>
+        </div>
+        <div class="download-error" id="dlerr-${escHtml(c.id)}" hidden></div>
+      </div>
+    `).join('');
+
+    list.querySelectorAll('button[data-action]').forEach(b => {
+      b.addEventListener('click', onDownloadAction);
+    });
+  }
+
+  function onDownloadAction(e) {
+    const action = e.target.dataset.action;
+    const id     = e.target.dataset.component;
+    if (action === 'cancel') {
+      e.target.disabled = true;
+      window.constellation.downloadCancel(id);
+    } else if (action === 'switch') {
+      // Disable both action buttons until aborted/done lands — prevents
+      // spam-click stacking pendingRestart and double downloadStart.
+      const act = document.getElementById(`dlact-${id}`);
+      if (act) act.querySelectorAll('button').forEach(b => b.disabled = true);
+      const st = downloadState.get(id) || { mirrorIndex: 0 };
+      st.pendingRestart = ((st.mirrorIndex || 0) + 1);
+      downloadState.set(id, st);
+      window.constellation.downloadCancel(id);
+    }
+  }
+
+  function setRowClass(id, cls) {
+    const row = document.getElementById(`dlrow-${id}`);
+    if (!row) return;
+    row.classList.remove('active', 'done', 'failed');
+    if (cls) row.classList.add(cls);
+  }
+
+  function paintProgress(p) {
+    const st = downloadState.get(p.component) || {};
+    // Monotonic guard — % cannot go backwards across mirror switches.
+    const rawPct = p.componentTotal > 0
+      ? Math.min(100, (p.componentReceived / p.componentTotal) * 100)
+      : 0;
+    const pct = Math.max(st.lastPct || 0, rawPct);
+    st.lastPct = pct;
+    st.mirror = p.mirror;
+    downloadState.set(p.component, st);
+
+    const fill = document.getElementById(`dlfill-${p.component}`);
+    if (fill) fill.style.width = `${pct}%`;
+    const pctEl = document.getElementById(`dlpct-${p.component}`);
+    if (pctEl) pctEl.textContent = `${pct.toFixed(0)}%`;
+    const bytesEl = document.getElementById(`dlbytes-${p.component}`);
+    if (bytesEl) bytesEl.textContent =
+      `${fmtBytes(p.componentReceived)} / ~${fmtBytes(p.componentTotal)}`;
+    const rateEl = document.getElementById(`dlrate-${p.component}`);
+    if (rateEl) rateEl.textContent = `${fmtSpeed(p.speed)} · ${fmtEta(p.eta)}`;
+    const mirrorEl = document.getElementById(`dlmirror-${p.component}`);
+    if (mirrorEl) mirrorEl.textContent = `mirror: ${p.mirror}`;
+    setRowClass(p.component, 'active');
+  }
+
+  function paintFileStart(p) {
+    const mirrorEl = document.getElementById(`dlmirror-${p.component}`);
+    if (mirrorEl) mirrorEl.textContent =
+      `mirror: ${p.mirror} · file ${p.fileIndex + 1}/${p.fileCount}`;
+    setRowClass(p.component, 'active');
+    // Compute mirror index from name so "Switch mirror" knows where we are
+    const st = downloadState.get(p.component) || {};
+    st.mirror = p.mirror;
+    downloadState.set(p.component, st);
+  }
+
+  function paintComponentDone(p) {
+    setRowClass(p.component, 'done');
+    const fill = document.getElementById(`dlfill-${p.component}`);
+    if (fill) fill.style.width = '100%';
+    const pctEl = document.getElementById(`dlpct-${p.component}`);
+    if (pctEl) pctEl.textContent = '✓ done';
+    const rateEl = document.getElementById(`dlrate-${p.component}`);
+    if (rateEl) rateEl.textContent = `${(p.durationMs / 1000).toFixed(0)}s`;
+    const act = document.getElementById(`dlact-${p.component}`);
+    if (act) act.hidden = true;
+    checkAllDone();
+  }
+
+  function paintComponentFail(p) {
+    setRowClass(p.component, 'failed');
+    // Cleanup any queued pending-restart so it doesn't fire later
+    const st = downloadState.get(p.component) || {};
+    st.pendingRestart = undefined;
+    downloadState.set(p.component, st);
+    const act = document.getElementById(`dlact-${p.component}`);
+    if (act) act.querySelectorAll('button').forEach(b => b.disabled = false);
+    const errEl = document.getElementById(`dlerr-${p.component}`);
+    if (errEl) {
+      errEl.hidden = false;
+      // Distinct messaging for manifest unsealed vs. real network failure
+      if (p.code === 'CHECKSUM_PLACEHOLDER') {
+        errEl.textContent = 'Release manifest is missing a SHA-256 checksum for this component. ' +
+          'This is a build problem, not a network problem — please reinstall Constellation, ' +
+          'or set CONSTELLATION_SKIP_CHECKSUM=1 only if you trust the source.';
+      } else if (p.code === 'ENOSPC' || /ENOSPC/.test(p.error || '')) {
+        errEl.textContent = 'Out of disk space. Free at least 4 GB and click Restart.';
+      } else {
+        errEl.textContent = `${p.error}. Click "Switch mirror" to retry from the next source, or check your network.`;
+      }
+    }
+  }
+
+  function paintMirrorFail(p) {
+    const mirrorEl = document.getElementById(`dlmirror-${p.component}`);
+    if (mirrorEl) mirrorEl.textContent = `${p.mirror} failed (${p.code || 'NET'}) — switching mirror`;
+  }
+
+  function paintAborted(p) {
+    setRowClass(p.component, '');
+    // If a Switch-mirror request is queued, fire it now (no race)
+    const st = downloadState.get(p.component) || {};
+    if (typeof st.pendingRestart === 'number') {
+      const next = st.pendingRestart;
+      st.pendingRestart = undefined;
+      st.mirrorIndex = next;
+      downloadState.set(p.component, st);
+      const mirrorEl = document.getElementById(`dlmirror-${p.component}`);
+      if (mirrorEl) mirrorEl.textContent = `switching to mirror #${next + 1}…`;
+      window.constellation.downloadStart(p.component, next);
+      return;
+    }
+    const mirrorEl = document.getElementById(`dlmirror-${p.component}`);
+    if (mirrorEl) mirrorEl.textContent = 'cancelled';
+    const act = document.getElementById(`dlact-${p.component}`);
+    if (act) {
+      const safeId = escHtml(p.component);
+      act.innerHTML = `<button type="button" data-action="restart" data-component="${safeId}">Restart</button>`;
+      act.querySelector('button').addEventListener('click', () => {
+        window.constellation.downloadStart(p.component, 0);
+      });
+    }
+  }
+
+  async function startStage1() {
+    showStage(1);
+    btnNext.disabled = true;
+    btnRecheck.hidden = true;
+
+    const components = await window.constellation.listComponents();
+    renderDownloadRows(components);
+
+    // Wire IPC listeners exactly once
+    if (!window._dlWired) {
+      window._dlWired = true;
+      window.constellation.onDownloadFileStart(paintFileStart);
+      window.constellation.onDownloadProgress(paintProgress);
+      window.constellation.onDownloadMirrorFail(paintMirrorFail);
+      window.constellation.onDownloadComponentDone(paintComponentDone);
+      window.constellation.onDownloadComponentFail(paintComponentFail);
+      window.constellation.onDownloadAborted(paintAborted);
+    }
+
+    // Kick off downloads in PARALLEL for components not already installed.
+    // Each `downloadStart` IPC returns immediately after registering the job,
+    // so `Promise.all` here does not serialize the actual transfers — it just
+    // ensures one start-failure doesn't short-circuit other components.
+    const pending = components.filter(c => !c.installed);
+    await Promise.all(pending.map(c =>
+      window.constellation.downloadStart(c.id).then(r => {
+        if (!r || !r.ok) paintComponentFail({ component: c.id, error: r ? r.error : 'start failed' });
+      }).catch(err => paintComponentFail({ component: c.id, error: err.message }))
+    ));
+    checkAllDone();
+  }
+
+  function checkAllDone() {
+    const rows = document.querySelectorAll('.download-row');
+    const allDone = rows.length > 0 && Array.from(rows).every(r => r.classList.contains('done'));
+    btnNext.disabled = !allDone;
+  }
+
+  // ─── Stage 3: LLM configuration ───────────────────────────────
+  // Multi-slot wizard: Simple=1 slot, Advanced=2, Expert=4. Each slot owns its
+  // own provider/key/model/test result. State persists across tier flips so
+  // Main config isn't lost when the user toggles Simple ↔ Advanced.
+  const llmState = {
+    tier: 'simple',
+    providers: [],          // populated from IPC at boot
+    slots: [],              // see makeSlot()
+    busy: false,
+  };
+
+  function makeSlot(roleScope, label) {
+    return {
+      roleScope, label,
+      cardId: '',
+      apiKey: '',
+      baseUrl: '',
+      model: '',
+      models: [],           // [{id,label,tier?,source}]
+      modelsSource: null,   // 'live'|'bundled'
+      modelsError: null,
+      testOk: false,
+      testLatency: null,
+      testError: null,
+      testHint: null,
+      testBusy: false,
+    };
+  }
+
+  function slotsForTier(tier) {
+    if (tier === 'expert') {
+      return [
+        makeSlot('main',          'Main — chat'),
+        makeSlot('consolidation', 'Consolidation — memory hygiene'),
+        makeSlot('anamnesis',     'Anamnesis — per-session debrief'),
+        makeSlot('explore',       'Explore / Cron / Worker — autonomous tasks'),
+      ];
+    }
+    if (tier === 'advanced') {
+      return [
+        makeSlot('main',   'Main — chat'),
+        makeSlot('others', 'Secondary — memory + workers (3 roles)'),
+      ];
+    }
+    return [makeSlot('main+all', 'All 4 roles')];
+  }
+
+  function pickTier(tier) {
+    if (llmState.tier === tier) return;
+    // If the user has typed config into any non-Main slot, switching tiers
+    // would discard it. Confirm before destroying work.
+    const willLose = llmState.slots.slice(1).some(s => s && (s.cardId || s.apiKey));
+    if (willLose && !confirm('Switching tiers will discard the configuration you typed for the secondary/expert slots. Continue?')) {
+      return;
+    }
+    // Carry first slot forward whenever possible so Main config isn't lost.
+    const oldFirst = llmState.slots[0];
+    llmState.tier = tier;
+    llmState.slots = slotsForTier(tier);
+    if (oldFirst && llmState.slots[0]) {
+      const k = llmState.slots[0];
+      k.cardId  = oldFirst.cardId;
+      k.apiKey  = oldFirst.apiKey;
+      k.baseUrl = oldFirst.baseUrl;
+      k.model   = oldFirst.model;
+      k.models  = oldFirst.models;
+      k.modelsSource = oldFirst.modelsSource;
+      k.testOk = oldFirst.testOk;
+      k.testLatency = oldFirst.testLatency;
+      k.testError = oldFirst.testError;
+    }
+    renderStage3();
+    scheduleDraftSave();
+  }
+
+  function renderStage3() {
+    document.querySelectorAll('.tier-card').forEach(c => {
+      c.classList.toggle('selected', c.dataset.tier === llmState.tier);
+    });
+    const container = document.getElementById('slots-container');
+    container.innerHTML = llmState.slots.map((s, i) => renderSlot(s, i)).join('');
+    // Wire events for every slot block.
+    llmState.slots.forEach((_, i) => wireSlot(i));
+    refreshNextButton();
+  }
+
+  function renderSlot(slot, idx) {
+    const cards = llmState.providers.map(p => {
+      const sel = slot.cardId === p.id ? ' selected' : '';
+      // Custom (OpenAI-compatible) gets a one-liner so users immediately know
+      // when this card is the right pick (proxies, OAuth bridges, self-hosted).
+      const subtitle = p.id === 'custom'
+        ? `<div class="prov-subtitle">Use this for proxies, OAuth bridges, or self-hosted endpoints.</div>`
+        : '';
+      return `<div class="prov-card${sel}" data-cardid="${escHtml(p.id)}" data-slot="${idx}">
+        <div class="prov-icon">${escHtml(p.icon)}</div>
+        <div class="prov-name">${escHtml(p.name)}</div>
+        <div class="prov-tag">${escHtml(p.tag)}</div>
+        ${subtitle}
+      </div>`;
+    }).join('');
+
+    let credentialsHtml = '';
+    let modelHtml = '';
+    let testHtml = '';
+    if (slot.cardId) {
+      const card = llmState.providers.find(p => p.id === slot.cardId);
+      if (card) {
+        // API key field (or local hint).
+        if (card.needsKey) {
+          credentialsHtml = `
+            <div class="field-row">
+              <label>API key for ${escHtml(card.name)}</label>
+              <input type="password"
+                     id="key-${idx}"
+                     value="${escHtml(slot.apiKey)}"
+                     placeholder="paste your API key"
+                     autocomplete="off"
+                     spellcheck="false">
+              <div class="help">
+                ${escHtml(card.helpText || '')}
+                ${card.apiKeyUrl
+                  ? ` <a data-openexternal="${escHtml(card.apiKeyUrl)}">Get a key →</a>`
+                  : ''}
+                Stored locally in <code>.env</code> (chmod 0600).
+              </div>
+            </div>`;
+        } else {
+          credentialsHtml = `
+            <div class="alert info">
+              ${escHtml(card.helpText || '')}
+              ${card.apiKeyUrl ? ` <a data-openexternal="${escHtml(card.apiKeyUrl)}" style="cursor:pointer;color:var(--accent)">Open ${escHtml(card.name)} site →</a>` : ''}
+            </div>`;
+        }
+
+        // Base-URL field (always editable, defaults visible).
+        const baseValue = slot.baseUrl || card.defaultBaseUrl || '';
+        credentialsHtml += `
+          <div class="field-row">
+            <label>Base URL</label>
+            <input type="text"
+                   id="baseurl-${idx}"
+                   value="${escHtml(baseValue)}"
+                   placeholder="${escHtml(card.defaultBaseUrl || '')}">
+            <div class="help">Leave default unless you have a custom proxy or self-hosted endpoint.</div>
+          </div>`;
+
+        // Model picker — free-text input for custom endpoints, dropdown otherwise.
+        if (card.allowFreeTextModel) {
+          modelHtml = `
+            <div class="field-row">
+              <label>Model</label>
+              <input type="text"
+                     id="model-${idx}"
+                     value="${escHtml(slot.model)}"
+                     placeholder="exact model id your bridge accepts"
+                     spellcheck="false">
+              <div class="help">Type the exact model id your bridge accepts. /v1/models is not probed for custom endpoints.</div>
+            </div>`;
+        } else {
+          let opts;
+          if (slot.models.length) {
+            opts = `<option value="" ${slot.model ? '' : 'selected'} disabled>Choose a model…</option>` +
+              slot.models.map(m => {
+                const tier = m.tier === 'recommended' ? ' — recommended' : '';
+                const src  = m.source === 'live' ? ' (live)' : ' (bundled)';
+                return `<option value="${escHtml(m.id)}" ${slot.model === m.id ? 'selected' : ''}>${escHtml(m.label || m.id)}${src}${tier}</option>`;
+              }).join('');
+          } else {
+            const emptyHint = card.needsKey
+              ? 'needs a key first'
+              : (card.id === 'ollama' ? 'pull a model first (e.g. ollama pull llama3.2:3b)'
+                : card.id === 'lmstudio' ? 'load a model in LM Studio first'
+                : 'start your local server first');
+            opts = `<option value="" disabled selected>Click "Refresh models" — ${escHtml(emptyHint)}.</option>`;
+          }
+          const bundledHint = card.needsKey
+            ? 'live fetch needs an API key'
+            : 'click Refresh once your local server is running';
+          const liveLabel = slot.modelsError
+            ? `<div class="help" style="color:var(--warn)">Live model fetch failed (${escHtml(slot.modelsError)}). Falling back to bundled list.</div>`
+            : (slot.modelsSource === 'live'
+                ? '<div class="help">Live list — pulled directly from your account.</div>'
+                : (slot.models.length ? `<div class="help">Bundled list (${escHtml(bundledHint)}).</div>` : ''));
+          modelHtml = `
+            <div class="field-row">
+              <label>Model</label>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <select id="model-${idx}" style="flex:1">${opts}</select>
+                <button type="button" class="btn-inline" data-action="refresh-models" data-slot="${idx}">Refresh models</button>
+              </div>
+              ${liveLabel}
+            </div>`;
+        }
+
+        // Test row.
+        let testCls = 'test-row';
+        let testText;
+        if (slot.testBusy) {
+          testCls += ' busy';
+          testText = 'Testing…';
+        } else if (slot.testOk) {
+          testCls += ' ok';
+          testText = 'Connection succeeded.';
+        } else if (slot.testError) {
+          testCls += ' err';
+          testText = `${escHtml(slot.testError)}${slot.testHint ? ' — ' + escHtml(slot.testHint) : ''}`;
+        } else {
+          testText = `Click <strong>Test connection</strong> to verify the key + model. (~$0.0005)`;
+        }
+        const lat = (slot.testOk && slot.testLatency != null)
+          ? `<span class="test-lat">${slot.testLatency} ms</span>` : '';
+        testHtml = `
+          <div class="${testCls}">
+            <span class="test-dot"></span>
+            <span class="test-text">${testText}</span>
+            ${lat}
+          </div>
+          <div style="margin-top:10px; display:flex; gap:8px;">
+            <button type="button" class="btn-inline" data-action="test" data-slot="${idx}" ${slot.testBusy ? 'disabled' : ''}>Test connection</button>
+            ${idx > 0 && llmState.slots[0].cardId ? `<button type="button" class="btn-inline" data-action="copy-from-main" data-slot="${idx}">Copy provider + key from Main</button>` : ''}
+          </div>`;
+      }
+    }
+
+    return `<div class="slot-block" data-slot="${idx}">
+      <div class="slot-header">${escHtml(slot.label)}</div>
+      <div class="provider-grid">${cards}</div>
+      ${credentialsHtml}
+      ${modelHtml}
+      ${testHtml}
+    </div>`;
+  }
+
+  function wireSlot(idx) {
+    const block = document.querySelector(`.slot-block[data-slot="${idx}"]`);
+    if (!block) return;
+    block.querySelectorAll('.prov-card').forEach(el => {
+      el.addEventListener('click', () => {
+        const slot = llmState.slots[idx];
+        const cardId = el.dataset.cardid;
+        if (slot.cardId === cardId) return;
+        slot.cardId = cardId;
+        const card = llmState.providers.find(p => p.id === cardId);
+        slot.apiKey = '';
+        slot.baseUrl = card ? (card.defaultBaseUrl || '') : '';
+        slot.model = '';
+        slot.models = [];
+        slot.modelsSource = null;
+        slot.modelsError = null;
+        slot.testOk = false; slot.testError = null; slot.testHint = null; slot.testLatency = null;
+        renderStage3();
+        scheduleDraftSave();
+      });
+    });
+    const keyEl = document.getElementById(`key-${idx}`);
+    if (keyEl) keyEl.addEventListener('input', e => {
+      llmState.slots[idx].apiKey = e.target.value;
+      // Clear stale test result on key change.
+      llmState.slots[idx].testOk = false; llmState.slots[idx].testError = null;
+      refreshNextButton();
+      scheduleDraftSave();
+    });
+    const baseEl = document.getElementById(`baseurl-${idx}`);
+    if (baseEl) baseEl.addEventListener('input', e => {
+      llmState.slots[idx].baseUrl = e.target.value;
+      llmState.slots[idx].testOk = false; llmState.slots[idx].testError = null;
+      refreshNextButton();
+      scheduleDraftSave();
+    });
+    const modelEl = document.getElementById(`model-${idx}`);
+    if (modelEl) {
+      const onModelChange = e => {
+        llmState.slots[idx].model = e.target.value;
+        llmState.slots[idx].testOk = false; llmState.slots[idx].testError = null;
+        refreshNextButton();
+        scheduleDraftSave();
+      };
+      modelEl.addEventListener('change', onModelChange);
+      // Free-text input fires 'input' on every keystroke; harmless for <select>.
+      modelEl.addEventListener('input', onModelChange);
+    }
+    block.querySelectorAll('button[data-action]').forEach(btn => {
+      btn.addEventListener('click', () => slotAction(btn.dataset.action, idx));
+    });
+    block.querySelectorAll('a[data-openexternal]').forEach(a => {
+      a.addEventListener('click', e => {
+        e.preventDefault();
+        window.constellation.openExternal(a.dataset.openexternal);
+      });
+    });
+  }
+
+  async function slotAction(action, idx) {
+    const slot = llmState.slots[idx];
+    const card = llmState.providers.find(p => p.id === slot.cardId);
+    if (!card) return;
+    if (action === 'refresh-models') {
+      slot.models = []; slot.modelsError = null; slot.modelsSource = null;
+      renderStage3();
+      const r = await window.constellation.llmListModels({
+        cardId: slot.cardId, apiKey: slot.apiKey, baseUrl: slot.baseUrl,
+      });
+      slot.models = r.models || [];
+      slot.modelsSource = r.source || null;
+      slot.modelsError = r.error || null;
+      // Auto-pick recommended if no model chosen yet.
+      if (!slot.model && slot.models.length) {
+        const rec = slot.models.find(m => m.tier === 'recommended') || slot.models[0];
+        if (rec) slot.model = rec.id;
+      }
+      renderStage3();
+      return;
+    }
+    if (action === 'test') {
+      if (!slot.model) {
+        slot.testError = 'Pick a model first.';
+        renderStage3();
+        return;
+      }
+      slot.testBusy = true; slot.testOk = false; slot.testError = null; slot.testHint = null; slot.testLatency = null;
+      renderStage3();
+      const r = await window.constellation.llmTestConnection({
+        cardId: slot.cardId, apiKey: slot.apiKey, baseUrl: slot.baseUrl, model: slot.model,
+      });
+      slot.testBusy = false;
+      if (r.ok) {
+        slot.testOk = true; slot.testLatency = r.latencyMs;
+      } else {
+        slot.testOk = false; slot.testError = r.error || 'Test failed'; slot.testHint = r.hint || null;
+      }
+      renderStage3();
+      return;
+    }
+    if (action === 'copy-from-main') {
+      const main = llmState.slots[0];
+      if (!main || !main.cardId) return;
+      const hadModel = slot.model;
+      slot.cardId = main.cardId;
+      slot.apiKey = main.apiKey;
+      slot.baseUrl = main.baseUrl;
+      slot.models = main.models;
+      slot.modelsSource = main.modelsSource;
+      // Preserve a previously-picked model when copying credentials, so the
+      // user doesn't lose their secondary-tier choice; otherwise auto-pick the
+      // bundled "fast" tier as a sensible cheap default.
+      if (!hadModel || !slot.models.some(m => m.id === hadModel)) {
+        const fast = slot.models.find(m => m.tier === 'fast') || slot.models.find(m => m.tier === 'recommended') || slot.models[0];
+        slot.model = fast ? fast.id : '';
+      }
+      slot.testOk = false; slot.testError = null; slot.testHint = null; slot.testLatency = null;
+      renderStage3();
+    }
+  }
+
+  function refreshNextButton() {
+    if (currentStage !== 3) return;
+    const allOk = llmState.slots.length > 0 && llmState.slots.every(s => s.testOk);
+    btnNext.disabled = !allOk || llmState.busy;
+  }
+
+  function expandSlotsToRoles() {
+    const map = {};
+    if (llmState.tier === 'simple') {
+      // Single source of truth: write only `main`. Other roles stay absent
+      // so the engine's llm-router #resolveRole falls back to main. Matches
+      // the dashboard's clear_roles semantic for the same tier.
+      map.main = llmState.slots[0];
+    } else if (llmState.tier === 'advanced') {
+      // User explicitly chose a secondary model for ALL internals — persist
+      // that choice across the 5 internal role IDs.
+      map.main = llmState.slots[0];
+      ['anamnesis','consolidation','worker','explore','compact'].forEach(r => { map[r] = llmState.slots[1]; });
+    } else {
+      // Expert: 4 visible slots map to 6 backend role IDs via mirroring.
+      // anamnesis -> compact, explore -> worker (matches dashboard panel mirroring).
+      llmState.slots.forEach(s => { map[s.roleScope] = s; });
+      if (map.anamnesis) map.compact = map.anamnesis;
+      if (map.explore)   map.worker  = map.explore;
+    }
+    return map;
+  }
+
+  // S6 — wizard draft persistence (offer to resume on Stage 3 entry).
+  // Debounced auto-save on every llmState mutation; cleared by main process on
+  // successful boot. Never cross-stage — only Stage 3 input has reuse value.
+  let draftSaveTimer = null;
+  function scheduleDraftSave() {
+    if (!window.constellation || !window.constellation.wizardSaveDraft) return;
+    clearTimeout(draftSaveTimer);
+    draftSaveTimer = setTimeout(() => {
+      const snapshot = { tier: llmState.tier, slots: llmState.slots };
+      try { window.constellation.wizardSaveDraft(snapshot); } catch {}
+    }, 600);
+  }
+
+  async function maybeRestoreDraft() {
+    if (!window.constellation || !window.constellation.wizardLoadDraft) return false;
+    let result;
+    try { result = await window.constellation.wizardLoadDraft(); } catch { return false; }
+    if (!result || !result.ok || !result.draft) return false;
+    const draft = result.draft;
+    // Sanity check: only restore if shape looks like a valid Stage 3 snapshot.
+    if (!draft.tier || !Array.isArray(draft.slots) || !draft.slots.length) return false;
+    const when = result.savedAt ? new Date(result.savedAt).toLocaleString() : 'an earlier session';
+    const ok = confirm(`Resume your unfinished setup from ${when}?\n\nClick Cancel to start fresh (the draft will be discarded).`);
+    if (!ok) {
+      try { await window.constellation.wizardClearDraft(); } catch {}
+      return false;
+    }
+    llmState.tier = draft.tier;
+    llmState.slots = draft.slots.map(s => Object.assign(makeSlot(s.roleScope || 'main', s.label || ''), s, {
+      // Force re-test after restore so user has to confirm keys still work.
+      testOk: false, testLatency: null, testError: null, testHint: null, testBusy: false,
+      modelsError: null,
+    }));
+    return true;
+  }
+
+  async function startStage3() {
+    showStage(3);
+    btnNext.disabled = true;
+    btnRecheck.hidden = true;
+
+    if (!llmState.providers.length) {
+      llmState.providers = await window.constellation.llmListProviders();
+    }
+    // Try to restore a previous draft *before* we materialize default slots.
+    // If restore declines/fails, fall back to default slot layout for the tier.
+    const restored = await maybeRestoreDraft();
+    if (!restored && !llmState.slots.length) llmState.slots = slotsForTier(llmState.tier);
+
+    // Wire tier-card listeners exactly once — re-entry of Stage 3 (back/forward)
+    // would otherwise stack duplicate handlers and call pickTier multiple times.
+    document.querySelectorAll('.tier-card').forEach(card => {
+      if (card.dataset.wired === '1') return;
+      card.dataset.wired = '1';
+      card.addEventListener('click', () => pickTier(card.dataset.tier));
+    });
+
+    renderStage3();
+  }
+
+  async function finishStage3() {
+    if (llmState.busy) return;
+    llmState.busy = true;
+    btnNext.disabled = true;
+    const llmSaveStatusEl = document.getElementById('llm-save-status');
+    if (llmSaveStatusEl) {
+      llmSaveStatusEl.className = 'status-message';
+      llmSaveStatusEl.textContent = '';
+    }
+    const roleMap = expandSlotsToRoles();
+    const roles = {};
+    for (const r of Object.keys(roleMap)) {
+      const s = roleMap[r];
+      if (!s) continue;
+      roles[r] = {
+        cardId: s.cardId,
+        apiKey: s.apiKey,
+        baseUrl: s.baseUrl,
+        model: s.model,
+      };
+    }
+    const r = await window.constellation.llmSaveConfig({ tier: llmState.tier, roles });
+    llmState.busy = false;
+    if (!r.ok) {
+      if (llmSaveStatusEl) {
+        llmSaveStatusEl.className = 'status-message err';
+        llmSaveStatusEl.textContent = 'Failed to save configuration: ' + (r.error || 'unknown error');
+      }
+      btnNext.disabled = false;
+      return;
+    }
+    startStage4();
+  }
+
+  // ─── Stage 4 (engine startup) ─────────────────────────────────
+  const PHASES = ['spawn', 'db', 'llm', 'warmup', 'ready'];
+  const bootState = { active: false, phaseListenerWired: false };
+
+  function setPhaseState(phase, state) {
+    const row = document.querySelector(`.boot-row[data-phase="${phase}"]`);
+    if (row) row.dataset.state = state;
+  }
+
+  function resetPhases() {
+    PHASES.forEach(p => setPhaseState(p, 'idle'));
+    document.getElementById('boot-fail').hidden = true;
+    document.getElementById('boot-fail-msg').textContent = '';
+  }
+
+  function advancePhasesUpTo(phase) {
+    // Mark the named phase 'active', and every prior phase 'done'.
+    const idx = PHASES.indexOf(phase);
+    if (idx < 0) return;
+    PHASES.forEach((p, i) => {
+      if (i < idx) setPhaseState(p, 'done');
+      else if (i === idx) setPhaseState(p, 'active');
+      else setPhaseState(p, 'idle');
+    });
+  }
+
+  function markAllPhasesDone() {
+    PHASES.forEach(p => setPhaseState(p, 'done'));
+  }
+
+  function showBootFailure(message) {
+    // Mark whichever phase was active as failed; leave earlier phases done.
+    const active = document.querySelector('.boot-row[data-state="active"]');
+    if (active) active.dataset.state = 'fail';
+    document.getElementById('boot-fail-msg').textContent = String(message || 'Unknown error');
+    document.getElementById('boot-fail').hidden = false;
+  }
+
+  async function startStage4() {
+    if (bootState.active) return;
+    bootState.active = true;
+
+    showStage(4);
+    // Footer Next is irrelevant during auto-boot — hide actions until failure block.
+    btnNext.hidden = true;
+    btnRecheck.hidden = true;
+
+    resetPhases();
+    advancePhasesUpTo('spawn');
+
+    // Subscribe exactly once — re-entry would double-fire phase updates.
+    if (!bootState.phaseListenerWired && window.constellation.onEngineBootProgress) {
+      window.constellation.onEngineBootProgress((evt) => {
+        if (!evt || typeof evt !== 'object') return;
+        if (evt.phase === 'fail') {
+          showBootFailure(evt.message);
+        } else if (evt.phase === 'ready') {
+          markAllPhasesDone();
+        } else if (PHASES.includes(evt.phase)) {
+          advancePhasesUpTo(evt.phase);
+        }
+      });
+      bootState.phaseListenerWired = true;
+    }
+
+    let r;
+    try {
+      r = await window.constellation.advanceToEngine();
+    } catch (err) {
+      r = { ok: false, error: err && err.message ? err.message : String(err) };
+    }
+    bootState.active = false;
+
+    if (!r || !r.ok) {
+      showBootFailure(r && r.error ? r.error : 'engine failed to start');
+      // Failure UI is self-contained (its own buttons); footer stays hidden.
+      return;
+    }
+    // Engine ready. Wizard stays open and advances to Stage 7 (Quick Quiz)
+    // so Mímir's bootstrap fetch loop has a topic seed before first dashboard
+    // open. Sentinel + draft cleanup already done in main.js advance-to-engine.
+    startStage7();
+  }
+
+  function startStage7() {
+    showStage(7);
+    // Re-enable the footer Continue for Stage 7 submit. Empty-state allowed
+    // (treats as skip — no seed written, no POST). Always-enabled keeps the
+    // user moving even if they have no opinion yet.
+    btnNext.hidden = false;
+    btnRecheck.hidden = true;
+    btnNext.textContent = 'Continue';
+    btnNext.classList.add('primary');
+    btnNext.disabled = false;
+  }
+
+  // ─── Boot-fail action buttons ─────────────────────────────────
+  document.getElementById('btn-boot-retry').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-boot-retry');
+    btn.disabled = true;
+    let r;
+    try { r = await window.constellation.engineRetry(); }
+    catch (err) { r = { ok: false, error: err && err.message || String(err) }; }
+    btn.disabled = false;
+    if (!r || !r.ok) {
+      // Stale child still alive — surface error, don't re-enter Stage 4 yet.
+      showBootFailure((r && r.error) || 'cannot retry — previous engine process is still running');
+      return;
+    }
+    bootState.active = false;
+    startStage4();
+  });
+
+  document.getElementById('btn-boot-logs').addEventListener('click', async () => {
+    try { await window.constellation.openEngineLogs(); } catch {}
+  });
+
+  document.getElementById('btn-boot-open-folder').addEventListener('click', async () => {
+    try { await window.constellation.permissionOpenFolder(); } catch {}
+  });
+
+  document.getElementById('btn-boot-report').addEventListener('click', async () => {
+    try { await window.constellation.reportIssue(); } catch {}
+  });
+
+  document.getElementById('btn-open-engine-folder').addEventListener('click', async () => {
+    try { await window.constellation.permissionOpenFolder(); } catch {}
+  });
+
+  document.getElementById('btn-boot-reset').addEventListener('click', async () => {
+    if (!confirm('Reset the wizard? Engine will be stopped and you\'ll start over from the environment check. Your typed API keys stay in .env.')) return;
+    document.getElementById('btn-boot-reset').disabled = true;
+    try { await window.constellation.engineReset(); } catch {}
+    // engineReset triggers app.relaunch in main; UI unloads shortly.
+  });
+
+  // Edit LLM Config: kill engine (reuse retry's stop logic) + go back to Stage 3
+  // so the user can fix provider/model/key without relaunching the app. Draft
+  // values stay in memory because we never reload between stages.
+  document.getElementById('btn-boot-edit-llm').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-boot-edit-llm');
+    btn.disabled = true;
+    let r;
+    try { r = await window.constellation.engineRetry(); }
+    catch (err) { r = { ok: false, error: err && err.message || String(err) }; }
+    btn.disabled = false;
+    if (!r || !r.ok) {
+      showBootFailure((r && r.error) || 'cannot edit — previous engine process is still running');
+      return;
+    }
+    bootState.active = false;
+    document.getElementById('boot-fail').hidden = true;
+    showStage(3);
+  });
+
+  // ─── Stage 7: Quick Quiz (interest seed) ──────────────────────
+  const quizState = { tags: new Set() };
+  document.querySelectorAll('#chip-grid .chip').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      const tag = chip.dataset.tag;
+      if (!tag) return;
+      if (quizState.tags.has(tag)) {
+        quizState.tags.delete(tag);
+        chip.classList.remove('selected');
+      } else {
+        quizState.tags.add(tag);
+        chip.classList.add('selected');
+      }
+    });
+  });
+
+  let quizSubmitting = false;
+  async function finishStage7() {
+    if (quizSubmitting) return;
+    quizSubmitting = true;
+    btnNext.disabled = true;
+    const statusEl = document.getElementById('quiz-status');
+    statusEl.className = 'quiz-status';
+    statusEl.textContent = '';
+
+    const tags = Array.from(quizState.tags);
+    const freetext = (document.getElementById('quiz-freetext').value || '').trim();
+
+    // Empty-state path: nothing selected, nothing typed → skip POST, advance to next stage.
+    // Engine sees no autonomy_seeds node; bootstrap loop falls back to
+    // identity-derived hints. This is the explicit "skip" experience.
+    if (tags.length === 0 && freetext.length === 0) {
+      quizSubmitting = false;
+      startStage8();
+      return;
+    }
+
+    // Submit seed — engine writes one autonomy_seeds node.
+    let r;
+    try {
+      r = await window.constellation.submitProfileSeed({ tags, freetext });
+    } catch (err) {
+      r = { ok: false, error: err && err.message || String(err) };
+    }
+    if (!r || !r.ok) {
+      // Soft-fail: surface error but let user retry or continue regardless.
+      // Bootstrap loop tolerates missing seed (per planning §6.2 fallback).
+      statusEl.className = 'quiz-status err';
+      statusEl.textContent = 'Could not save your answer: ' + ((r && r.error) || 'unknown error') + ' — Continue again to skip.';
+      btnNext.textContent = 'Continue without saving';
+      btnNext.disabled = false;
+      quizSubmitting = false;
+      // Next click finishes regardless. Toggle a one-shot bypass flag.
+      quizState.bypassOnNext = true;
+      return;
+    }
+    statusEl.className = 'quiz-status ok';
+    statusEl.textContent = 'Saved.';
+    quizSubmitting = false;
+    // Advance to next stage (OS notifications)
+    startStage8();
+  }
+
+  // ─── Stage 8: OS Notifications ────────────────────────────────
+  const notificationState = {};
+  const enableNotificationsCheckbox = document.getElementById('enable-notifications');
+  const notificationStatusEl = document.getElementById('notification-status');
+
+  enableNotificationsCheckbox.addEventListener('change', () => {
+    notificationState.enabled = enableNotificationsCheckbox.checked;
+  });
+
+  async function finishStage8() {
+    btnNext.disabled = true;
+    notificationStatusEl.className = '';
+    notificationStatusEl.textContent = '';
+
+    const enabled = enableNotificationsCheckbox.checked;
+    try {
+      const permResult = enabled
+        ? await window.constellation.requestNotificationPermission()
+        : { ok: false, permission: 'skipped' };
+      const permOk = enabled && permResult && permResult.ok;
+      // Persist the opt-in regardless of permission result. The engine only
+      // queues notifications when this flag is '1'; the launcher silently
+      // drops any queued row if the OS rejected the permission.
+      await window.constellation.setNotificationsOptIn(permOk);
+      if (enabled && permOk) {
+        notificationStatusEl.className = 'status-message ok';
+        notificationStatusEl.textContent = 'Notifications enabled.';
+      } else if (enabled) {
+        notificationStatusEl.className = 'status-message';
+        notificationStatusEl.textContent = 'You can enable notifications later in Settings.';
+      }
+    } catch (err) {
+      notificationStatusEl.className = 'status-message';
+      notificationStatusEl.textContent = 'You can enable notifications later in Settings.';
+    }
+
+    // Always allow continuing to next stage
+    setTimeout(() => {
+      btnNext.disabled = false;
+    }, 300);
+  }
+
+  // ─── Stage 9: Telegram (self-host BotFather flow) ─────────────
+  const telegramState = { token: '', chatId: '', tokenValid: false, preserveOnReturn: false };
+  const tgOpenBotFatherBtn = document.getElementById('telegram-open-botfather');
+  const tgTokenInput       = document.getElementById('telegram-token');
+  const tgTestTokenBtn     = document.getElementById('telegram-test-token');
+  const tgTokenStatusEl    = document.getElementById('telegram-token-status');
+  const tgStep3            = document.getElementById('telegram-step3');
+  const tgFetchChatIdBtn   = document.getElementById('telegram-fetch-chatid');
+  const tgChatIdStatusEl   = document.getElementById('telegram-chatid-status');
+  const tgChatIdInput      = document.getElementById('telegram-chatid');
+  const tgStep4            = document.getElementById('telegram-step4');
+  const tgSaveBtn          = document.getElementById('telegram-save');
+  const telegramStatusEl   = document.getElementById('telegram-status');
+  const skipTelegramCheckbox = document.getElementById('skip-telegram');
+
+  tgOpenBotFatherBtn && tgOpenBotFatherBtn.addEventListener('click', () => {
+    try { window.constellation.openExternal('https://t.me/BotFather'); } catch (_) {}
+  });
+
+  const tgTosLink = document.getElementById('telegram-tos-link');
+  const tgPrivacyLink = document.getElementById('telegram-privacy-link');
+  tgTosLink && tgTosLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    try { window.constellation.openExternal('https://telegram.org/tos'); } catch (_) {}
+  });
+  tgPrivacyLink && tgPrivacyLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    try { window.constellation.openExternal('https://telegram.org/privacy'); } catch (_) {}
+  });
+
+  tgTestTokenBtn && tgTestTokenBtn.addEventListener('click', async () => {
+    const token = (tgTokenInput.value || '').trim();
+    if (!token) {
+      tgTokenStatusEl.className = 'checkbox-hint err';
+      tgTokenStatusEl.textContent = 'Paste a token first.';
+      return;
+    }
+    tgTestTokenBtn.disabled = true;
+    tgTokenStatusEl.className = 'checkbox-hint';
+    tgTokenStatusEl.textContent = 'Validating…';
+    try {
+      const r = await window.constellation.telegramTestToken({ token });
+      if (r && r.ok) {
+        telegramState.token = token;
+        telegramState.tokenValid = true;
+        tgTokenStatusEl.className = 'checkbox-hint ok';
+        tgTokenStatusEl.textContent = 'Token valid' + (r.bot_name ? ' — bot: ' + r.bot_name : '');
+        tgStep3.hidden = false;
+      } else {
+        telegramState.tokenValid = false;
+        tgTokenStatusEl.className = 'checkbox-hint err';
+        tgTokenStatusEl.textContent = (r && r.error) || 'Token rejected.';
+      }
+    } catch (e) {
+      tgTokenStatusEl.className = 'checkbox-hint err';
+      tgTokenStatusEl.textContent = 'Network error: ' + (e?.message || e);
+    } finally {
+      tgTestTokenBtn.disabled = false;
+    }
+  });
+
+  tgFetchChatIdBtn && tgFetchChatIdBtn.addEventListener('click', async () => {
+    if (!telegramState.tokenValid) return;
+    tgFetchChatIdBtn.disabled = true;
+    tgChatIdStatusEl.className = 'checkbox-hint';
+    tgChatIdStatusEl.textContent = 'Looking for your message…';
+    try {
+      const r = await window.constellation.telegramFetchChatId({ token: telegramState.token });
+      if (r && r.ok && r.chat_id) {
+        telegramState.chatId = String(r.chat_id);
+        tgChatIdInput.value = telegramState.chatId;
+        tgChatIdStatusEl.className = 'checkbox-hint ok';
+        tgChatIdStatusEl.textContent = 'Found chat' + (r.from_name ? ' — ' + r.from_name : '');
+        tgStep4.hidden = false;
+      } else {
+        tgChatIdStatusEl.className = 'checkbox-hint err';
+        tgChatIdStatusEl.textContent = (r && r.error) || 'No messages found yet — send your bot a message and try again.';
+      }
+    } catch (e) {
+      tgChatIdStatusEl.className = 'checkbox-hint err';
+      tgChatIdStatusEl.textContent = 'Network error: ' + (e?.message || e);
+    } finally {
+      tgFetchChatIdBtn.disabled = false;
+    }
+  });
+
+  tgSaveBtn && tgSaveBtn.addEventListener('click', async () => {
+    const chatId = (tgChatIdInput.value || '').trim();
+    if (!telegramState.tokenValid || !chatId) {
+      telegramStatusEl.className = 'status-message err';
+      telegramStatusEl.textContent = 'Need a validated token and chat ID first.';
+      return;
+    }
+    tgSaveBtn.disabled = true;
+    telegramStatusEl.className = 'status-message';
+    telegramStatusEl.textContent = 'Saving and sending test message…';
+    try {
+      const r = await window.constellation.telegramSave({ token: telegramState.token, chatId });
+      if (r && r.ok) {
+        if (r.test_sent) {
+          telegramStatusEl.className = 'status-message ok';
+          telegramStatusEl.textContent = 'Saved. A test message has been sent to your Telegram — check it!';
+        } else {
+          telegramStatusEl.className = 'status-message ok';
+          telegramStatusEl.textContent = 'Saved (test message failed: ' + (r.test_error || 'unknown') + '). You can still continue.';
+        }
+        skipTelegramCheckbox.checked = false;
+      } else {
+        telegramStatusEl.className = 'status-message err';
+        telegramStatusEl.textContent = (r && r.error) || 'Save failed.';
+      }
+    } catch (e) {
+      telegramStatusEl.className = 'status-message err';
+      telegramStatusEl.textContent = 'Network error: ' + (e?.message || e);
+    } finally {
+      tgSaveBtn.disabled = false;
+    }
+  });
+
+  function initStage9() {
+    telegramState.token = '';
+    telegramState.chatId = '';
+    telegramState.tokenValid = false;
+    tgTokenInput.value = '';
+    tgChatIdInput.value = '';
+    tgTokenStatusEl.textContent = '';
+    tgChatIdStatusEl.textContent = '';
+    telegramStatusEl.textContent = '';
+    tgStep3.hidden = true;
+    tgStep4.hidden = true;
+    skipTelegramCheckbox.checked = false;
+  }
+
+  async function finishStage9() {
+    btnNext.disabled = true;
+    telegramStatusEl.className = '';
+    telegramStatusEl.textContent = '';
+    // Stage 9 is no longer the final step — advance to Stage 10 (Memory Import).
+    startStage10();
+  }
+
+  function startStage8() {
+    showStage(8);
+    btnNext.hidden = false;
+    btnRecheck.hidden = true;
+    btnNext.textContent = 'Continue';
+    btnNext.classList.add('primary');
+    btnNext.disabled = false;
+  }
+
+  function startStage9() {
+    showStage(9);
+    // If user came back to Stage 9 via Prev→8→Continue, the previously-typed
+    // Telegram token/chatId should survive the round-trip. The Prev handler
+    // sets telegramState.preserveOnReturn for exactly one transition.
+    if (telegramState.preserveOnReturn) {
+      telegramState.preserveOnReturn = false;
+    } else {
+      initStage9();
+    }
+    btnNext.hidden = false;
+    btnRecheck.hidden = true;
+    btnNext.textContent = 'Continue';
+    btnNext.classList.add('primary');
+    btnNext.disabled = false;
+  }
+
+  // ─── Stage 10: Memory Import (optional) ───────────────────────
+  const importState = {
+    folder: null,
+    files: null,      // P36: explicit-file path; mutex with folder
+    preview: null,
+    route: 'A',
+    capOverride: false,
+    running: false,
+    completed: false,
+    batchId: null,
+    written: 0,
+  };
+  const btnPickFolder       = document.getElementById('btn-pick-folder');
+  const btnPickFiles        = document.getElementById('btn-pick-files');
+  const pickedFolderEl      = document.getElementById('picked-folder');
+  const wizardDropOverlay   = document.getElementById('wizard-drop-overlay');
+  const stage10Section      = document.getElementById('stage-10-section');
+  const importPreviewBox    = document.getElementById('import-preview');
+  const importStatsEl       = document.getElementById('import-stats');
+  const importSamplesEl     = document.getElementById('import-samples');
+  const importQuarantineEl  = document.getElementById('import-quarantine');
+  const bAdvancedWrap       = document.getElementById('b-advanced-wrap');
+  const showBAdvancedLink   = document.getElementById('show-b-advanced');
+  const bAdvancedPanel      = document.getElementById('b-advanced');
+  const bCapOverrideCb      = document.getElementById('b-cap-override');
+  const btnRunImport        = document.getElementById('btn-run-import');
+  const importProgressBox   = document.getElementById('import-progress');
+  const importProgressText  = document.getElementById('import-progress-text');
+  const importResultBox     = document.getElementById('import-result');
+  const importResultText    = document.getElementById('import-result-text');
+  const skipImportCb        = document.getElementById('skip-import');
+
+  document.querySelectorAll('input[name="import-route"]').forEach((r) => {
+    r.addEventListener('change', () => {
+      importState.route = r.value;
+      bAdvancedWrap.hidden = r.value !== 'B';
+      // Re-preview to refresh cap warning, if input is already picked.
+      if (importState.folder || importState.files) runImportPreview();
+    });
+  });
+  showBAdvancedLink && showBAdvancedLink.addEventListener('click', () => {
+    bAdvancedPanel.hidden = !bAdvancedPanel.hidden;
+  });
+  bCapOverrideCb && bCapOverrideCb.addEventListener('change', () => {
+    importState.capOverride = bCapOverrideCb.checked;
+    if (importState.folder || importState.files) runImportPreview();
+  });
+  skipImportCb && skipImportCb.addEventListener('change', () => {
+    // If skipping, hide the import controls but allow Continue.
+    btnRunImport.disabled = skipImportCb.checked;
+  });
+
+  btnPickFolder.addEventListener('click', async () => {
+    try {
+      const r = await window.constellation.openImportPicker();
+      if (!r || !r.ok || !r.folder) return;
+      importState.folder = r.folder;
+      importState.files = null;
+      pickedFolderEl.textContent = r.folder;
+      await runImportPreview();
+    } catch (err) {
+      pickedFolderEl.textContent = 'Could not open folder picker.';
+    }
+  });
+
+  // P36: Pick files… (multi-select)
+  btnPickFiles && btnPickFiles.addEventListener('click', async () => {
+    try {
+      const r = await window.constellation.openImportFiles();
+      if (!r || !r.ok || !Array.isArray(r.files) || !r.files.length) return;
+      importState.files = r.files;
+      importState.folder = null;
+      pickedFolderEl.textContent = r.files.length === 1
+        ? r.files[0]
+        : `${r.files.length} file(s) selected`;
+      await runImportPreview();
+    } catch (err) {
+      pickedFolderEl.textContent = 'Could not open file picker.';
+    }
+  });
+
+  // P36: drag-and-drop. Electron 32 dropped File.path; resolve via the
+  // preload-exposed getPathForFile. We only accept .md/.txt/.docx via the
+  // extension filter — anything else gets quietly ignored.
+  (function initWizardDropZone() {
+    if (!stage10Section || !wizardDropOverlay) return;
+    let dropCounter = 0;
+    function isVisible() { return !stage10Section.hidden; }
+    stage10Section.addEventListener('dragenter', (e) => {
+      if (!isVisible()) return;
+      e.preventDefault();
+      dropCounter++;
+      wizardDropOverlay.style.display = 'flex';
+    });
+    stage10Section.addEventListener('dragover', (e) => {
+      if (!isVisible()) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    });
+    stage10Section.addEventListener('dragleave', (e) => {
+      if (!isVisible()) return;
+      e.preventDefault();
+      dropCounter--;
+      if (dropCounter <= 0) { dropCounter = 0; wizardDropOverlay.style.display = 'none'; }
+    });
+    stage10Section.addEventListener('drop', async (e) => {
+      if (!isVisible()) return;
+      e.preventDefault();
+      dropCounter = 0;
+      wizardDropOverlay.style.display = 'none';
+      const fileList = e.dataTransfer && e.dataTransfer.files;
+      if (!fileList || !fileList.length) return;
+      const accepted = [];
+      for (let i = 0; i < fileList.length; i++) {
+        const f = fileList[i];
+        const name = String(f.name || '').toLowerCase();
+        if (!/\.(md|txt|docx)$/.test(name)) continue;
+        let abs = '';
+        try { abs = window.constellation.getPathForFile(f) || ''; } catch {}
+        if (abs) accepted.push(abs);
+      }
+      if (!accepted.length) {
+        pickedFolderEl.textContent = 'No supported files (.md / .txt / .docx) found in drop.';
+        return;
+      }
+      importState.files = accepted;
+      importState.folder = null;
+      pickedFolderEl.textContent = accepted.length === 1
+        ? accepted[0]
+        : `${accepted.length} file(s) dropped`;
+      await runImportPreview();
+    });
+  })();
+
+  async function runImportPreview() {
+    if (!importState.folder && !importState.files) return;
+    importPreviewBox.hidden = false;
+    importStatsEl.className = 'status-message';
+    importStatsEl.textContent = 'Scanning…';
+    importSamplesEl.textContent = '';
+    importQuarantineEl.hidden = true;
+    importQuarantineEl.textContent = '';
+    try {
+      const r = await window.constellation.importPreview({
+        folder: importState.folder || '',
+        files:  importState.files || null,
+        route: importState.route,
+        capOverride: importState.capOverride,
+      });
+      if (!r || !r.ok) {
+        importStatsEl.className = 'status-message err';
+        importStatsEl.textContent = 'Preview failed: ' + ((r && r.error) || 'unknown');
+        return;
+      }
+      importState.preview = r;
+      const lines = [];
+      lines.push(`${r.count} note(s) ready to import.`);
+      if (r.truncated_at_cap) {
+        lines.push(`Truncated at cap (${r.cap}). Some files were skipped.`);
+      }
+      if (typeof r.total_bytes === 'number') {
+        lines.push(`Total size: ${(r.total_bytes / 1024).toFixed(1)} KB.`);
+      }
+      if (typeof r.token_estimate === 'number' && importState.route === 'B') {
+        lines.push(`Approx ${r.token_estimate.toLocaleString()} LLM tokens.`);
+      }
+      importStatsEl.className = 'status-message ok';
+      importStatsEl.textContent = lines.join(' ');
+      if (Array.isArray(r.sample) && r.sample.length) {
+        importSamplesEl.textContent = 'Examples:\n' + r.sample.slice(0, 5).map(s => '  • ' + s).join('\n');
+      }
+      if (r.quarantined_count > 0) {
+        importQuarantineEl.hidden = false;
+        importQuarantineEl.className = 'status-message';
+        importQuarantineEl.textContent =
+          `${r.quarantined_count} file(s) quarantined (likely contained secrets and were skipped).`;
+      }
+      btnRunImport.disabled = (r.count === 0) || skipImportCb.checked;
+    } catch (err) {
+      importStatsEl.className = 'status-message err';
+      importStatsEl.textContent = 'Preview failed: ' + (err && err.message || String(err));
+    }
+  }
+
+  // Buffer for incremental progress events from main process.
+  window.constellation.onImportProgress((evt) => {
+    if (!evt) return;
+    if (evt.type === 'start') {
+      importState.batchId = evt.batch_id || null;
+      importProgressBox.hidden = false;
+      importProgressText.className = 'status-message';
+      importProgressText.textContent = `Starting import (${evt.total || 0} note(s))…`;
+    } else if (evt.type === 'progress') {
+      const pct = evt.total ? Math.round((evt.i / evt.total) * 100) : 0;
+      importProgressText.textContent =
+        `Importing ${evt.i || 0}/${evt.total || 0} (${pct}%)…`;
+    } else if (evt.type === 'fallback') {
+      importProgressText.className = 'status-message';
+      importProgressText.textContent =
+        `One file fell back to Quick Import. Continuing…`;
+    } else if (evt.type === 'progress_error') {
+      // Non-fatal per-file error — just keep going.
+    } else if (evt.type === 'done') {
+      importState.completed = true;
+      importState.written = evt.written || 0;
+      importState.running = false;
+      importProgressBox.hidden = true;
+      importResultBox.hidden = false;
+      importResultText.className = 'status-message ok';
+      const parts = [`Imported ${evt.written || 0} note(s)`];
+      if (evt.failed > 0) parts.push(`${evt.failed} failed`);
+      if (evt.duplicates > 0) parts.push(`${evt.duplicates} duplicate`);
+      if (evt.milestones_written > 0) parts.push(`${evt.milestones_written} milestone(s)`);
+      importResultText.textContent = parts.join(' · ') + '. You can continue.';
+      btnNext.disabled = false;
+    }
+  });
+
+  btnRunImport.addEventListener('click', async () => {
+    if (importState.running) return;
+    if (!importState.folder && !importState.files) return;
+    importState.running = true;
+    importState.completed = false;
+    btnRunImport.disabled = true;
+    btnNext.disabled = true;
+    importResultBox.hidden = true;
+    importProgressBox.hidden = false;
+    importProgressText.className = 'status-message';
+    importProgressText.textContent = 'Starting…';
+
+    try {
+      const r = await window.constellation.importRun({
+        folder: importState.folder || '',
+        files:  importState.files || null,
+        route: importState.route,
+        capOverride: importState.capOverride,
+      });
+      // The done event is delivered via onImportProgress; importRun returns
+      // the final summary as a fallback in case the event was missed.
+      if (r && r.ok && !importState.completed) {
+        importState.completed = true;
+        importState.written = r.written || 0;
+        importState.batchId = r.batch_id || importState.batchId;
+        importState.running = false;
+        importProgressBox.hidden = true;
+        importResultBox.hidden = false;
+        importResultText.className = 'status-message ok';
+        const parts = [`Imported ${r.written || 0} note(s)`];
+        if (r.failed > 0) parts.push(`${r.failed} failed`);
+        if (r.duplicates > 0) parts.push(`${r.duplicates} duplicate`);
+        if (r.milestones_written > 0) parts.push(`${r.milestones_written} milestone(s)`);
+        importResultText.textContent = parts.join(' · ') + '. You can continue.';
+        btnNext.disabled = false;
+      } else if (!r || !r.ok) {
+        importState.running = false;
+        importProgressText.className = 'status-message err';
+        importProgressText.textContent =
+          'Import failed: ' + ((r && r.error) || 'unknown');
+        btnNext.disabled = false;
+        btnRunImport.disabled = false;
+      }
+    } catch (err) {
+      importState.running = false;
+      importProgressText.className = 'status-message err';
+      importProgressText.textContent = 'Import failed: ' + (err && err.message || String(err));
+      btnNext.disabled = false;
+      btnRunImport.disabled = false;
+    }
+  });
+
+  function startStage10() {
+    showStage(10);
+    btnNext.hidden = false;
+    btnRecheck.hidden = true;
+    btnNext.textContent = 'Continue';
+    btnNext.classList.add('primary');
+    // Allow continue immediately — import is fully optional.
+    btnNext.disabled = false;
+    importState.completed = false;
+    importState.batchId = null;
+    importState.written = 0;
+    importState.folder = null;
+    importState.files = null;
+    pickedFolderEl.textContent = '';
+    importPreviewBox.hidden = true;
+    importProgressBox.hidden = true;
+    importResultBox.hidden = true;
+    skipImportCb.checked = false;
+    btnRunImport.disabled = true;
+  }
+
+  async function finishStage10() {
+    btnNext.disabled = true;
+    const ranRouteB = importState.completed && importState.route === 'B';
+    const enoughForRefine = (importState.written || 0) >= 10;
+    const skipped = skipImportCb && skipImportCb.checked;
+
+    // Fire reflection for any successful import (Route A or B), non-blocking.
+    // Skip path and empty imports get no reflection.
+    if (!skipped && importState.completed && importState.batchId && (importState.written || 0) > 0) {
+      try {
+        window.constellation.importReflection({ batch_id: importState.batchId })
+          .catch(() => {});
+      } catch (_) { /* ignore */ }
+    }
+
+    // Conditional advance to Stage 11: Route B + ≥10 imported nodes only.
+    if (!skipped && ranRouteB && enoughForRefine) {
+      startStage11();
+      return;
+    }
+
+    // Otherwise, finish onboarding.
+    try {
+      await window.constellation.finishOnboarding();
+    } catch (err) {
+      importResultBox.hidden = false;
+      importResultText.className = 'status-message err';
+      importResultText.textContent = 'Could not close wizard: ' + (err && err.message || String(err));
+      btnNext.disabled = false;
+    }
+  }
+
+  // ─── Stage 11: Soul Core Refinement (conditional) ─────────────
+  const soulCoreState = {
+    drafting: false,
+    saving: false,
+    drafted: false,
+    segments: { name: '', values: '', direction: '', relationship: '' },
+  };
+  const btnSoulCoreDraft   = document.getElementById('btn-soul-core-draft');
+  const soulCoreStatusEl   = document.getElementById('soul-core-status');
+  const soulCoreSegmentsEl = document.getElementById('soul-core-segments');
+  const scNameEl           = document.getElementById('sc-name');
+  const scValuesEl         = document.getElementById('sc-values');
+  const scDirectionEl      = document.getElementById('sc-direction');
+  const scRelationshipEl   = document.getElementById('sc-relationship');
+  const btnSoulCoreSave    = document.getElementById('btn-soul-core-save');
+  const skipSoulCoreCb     = document.getElementById('skip-soul-core-refine');
+
+  btnSoulCoreDraft.addEventListener('click', async () => {
+    if (soulCoreState.drafting) return;
+    if (!importState.batchId) return;
+    soulCoreState.drafting = true;
+    btnSoulCoreDraft.disabled = true;
+    soulCoreStatusEl.textContent = 'Drafting from your memories…';
+    try {
+      const r = await window.constellation.soulCoreDraft({ batch_id: importState.batchId });
+      if (!r || !r.ok) {
+        soulCoreStatusEl.textContent = 'Draft failed: ' + ((r && r.error) || 'unknown');
+        soulCoreState.drafting = false;
+        btnSoulCoreDraft.disabled = false;
+        return;
+      }
+      const seg = r.segments || {};
+      scNameEl.value         = seg.name         || '';
+      scValuesEl.value       = seg.values       || '';
+      scDirectionEl.value    = seg.direction    || '';
+      scRelationshipEl.value = seg.relationship || '';
+      soulCoreSegmentsEl.hidden = false;
+      soulCoreState.drafted = true;
+      soulCoreStatusEl.textContent = 'Draft ready — edit if you like.';
+    } catch (err) {
+      soulCoreStatusEl.textContent = 'Draft failed: ' + (err && err.message || String(err));
+    } finally {
+      soulCoreState.drafting = false;
+      btnSoulCoreDraft.disabled = false;
+    }
+  });
+
+  btnSoulCoreSave.addEventListener('click', async () => {
+    if (soulCoreState.saving || soulCoreState.finishing) return;
+    soulCoreState.saving = true;
+    btnSoulCoreSave.disabled = true;
+    btnNext.disabled = true;
+    soulCoreStatusEl.textContent = 'Saving…';
+    const segments = {
+      name:         (scNameEl.value || '').trim(),
+      values:       (scValuesEl.value || '').trim(),
+      direction:    (scDirectionEl.value || '').trim(),
+      relationship: (scRelationshipEl.value || '').trim(),
+    };
+    try {
+      const r = await window.constellation.soulCoreSave({
+        batch_id: importState.batchId,
+        segments,
+      });
+      if (!r || !r.ok) {
+        soulCoreStatusEl.textContent = 'Save failed: ' + ((r && r.error) || 'unknown');
+        soulCoreState.saving = false;
+        btnSoulCoreSave.disabled = false;
+        btnNext.disabled = false;
+        return;
+      }
+      soulCoreStatusEl.textContent = 'Saved.';
+      // Save success → finish onboarding. Set finishing guard so btn-next
+      // (still wired to finishStage11) cannot trigger a duplicate close.
+      soulCoreState.finishing = true;
+      await window.constellation.finishOnboarding();
+    } catch (err) {
+      soulCoreStatusEl.textContent = 'Save failed: ' + (err && err.message || String(err));
+      soulCoreState.saving = false;
+      btnSoulCoreSave.disabled = false;
+      btnNext.disabled = false;
+    }
+  });
+
+  function startStage11() {
+    showStage(11);
+    btnNext.hidden = false;
+    btnRecheck.hidden = true;
+    btnNext.textContent = 'Finish Setup';
+    btnNext.classList.add('primary');
+    btnNext.disabled = false;
+    soulCoreSegmentsEl.hidden = true;
+    soulCoreStatusEl.textContent = '';
+    skipSoulCoreCb.checked = false;
+  }
+
+  async function finishStage11() {
+    if (soulCoreState.finishing) return;  // guard: Save&Finish already firing finishOnboarding
+    soulCoreState.finishing = true;
+    btnNext.disabled = true;
+    try {
+      await window.constellation.finishOnboarding();
+    } catch (err) {
+      soulCoreState.finishing = false;
+      soulCoreStatusEl.textContent = 'Could not close wizard: ' + (err && err.message || String(err));
+      btnNext.disabled = false;
+    }
+  }
+
+  // ─── boot ─────────────────────────────────────────────────────
+  showStage(0);
+  runEnvCheck();
+
+  btnRecheck.addEventListener('click', runEnvCheck);
+  btnPrev.addEventListener('click', () => {
+    const target = PREV_TARGET[currentStage];
+    if (target == null) return;
+    // Leaving Stage 9 backwards: mark Telegram state as protected so a later
+    // forward path (8→Continue→9) doesn't wipe the typed token/chatId.
+    if (currentStage === 9) telegramState.preserveOnReturn = true;
+    btnPrev.disabled = true;
+    if (target === 7) startStage7();
+    else if (target === 8) startStage8();
+    else if (target === 9) {
+      // Re-show without re-running initStage9 — that would wipe typed Telegram
+      // token/chatId. The user explicitly came back to revisit/edit them.
+      showStage(9);
+      btnNext.hidden = false;
+      btnRecheck.hidden = true;
+      btnNext.textContent = 'Continue';
+      btnNext.classList.add('primary');
+      btnNext.disabled = false;
+    }
+  });
+  btnNext.addEventListener('click', () => {
+    if (currentStage === 0)      startStage1();
+    else if (currentStage === 1) startStage3();
+    else if (currentStage === 3) finishStage3();
+    else if (currentStage === 7) {
+      if (quizState.bypassOnNext) {
+        // User saw a seed-write error and clicked Continue again — skip POST
+        // and advance to next stage.
+        quizSubmitting = false;
+        startStage8();
+        return;
+      }
+      finishStage7();
+    }
+    else if (currentStage === 8) {
+      finishStage8();
+      setTimeout(() => startStage9(), 400);
+    }
+    else if (currentStage === 9) {
+      finishStage9();
+    }
+    else if (currentStage === 10) {
+      finishStage10();
+    }
+    else if (currentStage === 11) {
+      finishStage11();
+    }
+  });
+</script>
+</body>
+</html>
