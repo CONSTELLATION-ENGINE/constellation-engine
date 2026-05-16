@@ -21,6 +21,7 @@ export function buildHTML(_authToken, _identity = null) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Constellation Engine (headless)</title>
+<link rel="icon" id="ce-favicon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=">
 <style>
   :root { color-scheme: light dark; }
   body {
@@ -51,6 +52,7 @@ export function buildHTML(_authToken, _identity = null) {
   <p>The engine itself is fully functional — cron tasks, the Mímir autonomy loop, the agent runtime, the telegram bot, and the database are all running. You can interact via the telegram bot or by extending the API (<code>/api/status</code>, <code>/engine.ready</code>).</p>
   <p>Official build: <a href="${DOCS_URL}">${DOCS_URL}</a></p>
   <p>Source: <a href="${SOURCE_URL}">${SOURCE_URL}</a></p>
+<script>(function(){try{var img=document.querySelector('img.logo');if(img&&img.src){var f=document.getElementById('ce-favicon');if(f)f.href=img.src;}}catch(_){}})();<\/script>
 </body>
 </html>`;
 }
