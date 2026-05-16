@@ -1,6 +1,10 @@
-# Constellation Engine
+<p align="center">
+  <img src="docs/logo.png" alt="Constellation Engine" width="160" height="160" />
+</p>
 
-An open-source autonomous multi-modal memory and reasoning architecture for long-context agent systems.
+<h1 align="center">Constellation Engine</h1>
+
+<p align="center">An open-source autonomous multi-modal memory and reasoning architecture for long-context agent systems.</p>
 
 ## Features
 
