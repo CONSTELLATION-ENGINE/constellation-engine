@@ -572,6 +572,31 @@ async function spawnEngine(port) {
       userInitiatedStop = false;
       return;
     }
+    // RESTART_TOUCH path: the engine wrote .restart-requested before exiting
+    // cleanly to request a respawn (pulse-handlers.js writeRestartTouch). Treat
+    // as user-initiated for the crash modal, then spawn a fresh engine on the
+    // same port. We delete the flag here so a future un-flagged exit cleanly
+    // surfaces as a crash again.
+    const restartFlagPath = path.join(ENGINE_DIR, '.restart-requested');
+    if (code === 0 && !wasUserInitiated && fs.existsSync(restartFlagPath)) {
+      let reason = 'agent-self-trigger';
+      const reasonPath = path.join(ENGINE_DIR, '.restart-reason');
+      try { reason = fs.readFileSync(reasonPath, 'utf-8').trim() || reason; } catch {}
+      try { fs.unlinkSync(restartFlagPath); } catch {}
+      captureLog(`[launcher] RESTART_TOUCH detected (reason="${reason}") — respawning engine`);
+      userInitiatedStop = false;
+      const portForRespawn = enginePort;
+      // Small delay so any subscribers see the exit event before the new spawn.
+      setTimeout(() => {
+        spawnEngine(portForRespawn).catch(e => {
+          captureLog(`[launcher] RESTART_TOUCH respawn failed: ${e.message}`);
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('engine:crashed', { code, signal, tail: recentLogTail(40) });
+          }
+        });
+      }, 500);
+      return;
+    }
     // Crash = unexpected exit while we thought we were running. Operator-driven
     // Stop/Restart sets userInitiatedStop first, so we don't surface a modal in
     // those cases.

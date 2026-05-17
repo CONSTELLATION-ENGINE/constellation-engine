@@ -63,7 +63,7 @@ import { hookRuntime as hookConversationLogger, getRecentLog, listLogDates, prun
 import { DbSnapshotManager } from './db-snapshots.js';
 import { BehaviorLogger } from './behavior-logger.js';
 import { SessionDebrief } from './session-debrief.js';
-import { writeTaskTouches, writeCognitiveTouches, writeCompletionCandidates } from './pulse-handlers.js';
+import { writeTaskTouches, writeCognitiveTouches, writeCompletionCandidates, writeRestartTouch } from './pulse-handlers.js';
 import { extractCompletionCandidates } from './task-completion-extractor.js';
 import { matchActiveTasks, loadActiveTasks } from './task-completion-matcher.js';
 import { sleipnirTrail, deriveCallerKind } from './sleipnir-trail.js';
@@ -85,9 +85,11 @@ let app = null;
 
 /**
  * Ratatoskr L0 dispatcher: extract pulse hints from a turn response and route
- * each kind to its writer. Two kinds are supported:
+ * each kind to its writer. Three kinds are supported:
  *   - TASK_TOUCH      → identity/tasks.json (status flip / note append)
  *   - COGNITIVE_TOUCH → identity/cognitive-buffer.txt (ring buffer append)
+ *   - RESTART_TOUCH   → .restart-requested + delayed process.exit(0)
+ *                       (start.sh respawns; auto-resume picks up the turn)
  *
  * All writers also append an audit row to pulse_hint_log. Errors are swallowed
  * per-kind so one malformed hint can't stop the others.
@@ -176,6 +178,27 @@ async function maybeIngestPulseHints(engine, responseText, opts = {}) {
         }
       }
     } catch (e) { console.warn(`[pulse-hint] cognitive-touch ingest failed: ${e.message}`); }
+  }
+
+  // ── RESTART_TOUCH (controlled engine exit; start.sh respawns) ────────────
+  // Writes .restart-requested + .restart-reason then schedules process.exit(0).
+  // start.sh watchdog wakes a fresh instance, and telegram.js auto-resume picks
+  // up the interrupted turn from turn_journal. The current turn completes its
+  // response first (we run after extraction, exit is delayed delay_ms).
+  if (hasTouch && responseText.includes('RESTART_TOUCH:')) {
+    try {
+      const hints = BehaviorLogger.extractRestartTouches(responseText);
+      if (hints.length > 0) {
+        const r = writeRestartTouch(engine, hints);
+        if (r.armed) {
+          liveBus.safeEmit?.('ratatoskr.pulse', {
+            kind: 'restart-touch',
+            reason: r.reason,
+            delay_ms: r.delay_ms,
+          });
+        }
+      }
+    } catch (e) { console.warn(`[pulse-hint] restart-touch ingest failed: ${e.message}`); }
   }
 
   // ── L2 implicit task-completion candidates (Plan C hybrid, 2026-04-29) ──

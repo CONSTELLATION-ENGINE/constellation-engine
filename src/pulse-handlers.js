@@ -27,8 +27,14 @@ const TASKS_BACKUP_SUFFIX = '.bak';
 
 const TASK_TOUCH_OWNER = 'self';                 // tasks.json is whole-engine state
 const COGNITIVE_TOUCH_OWNER = 'self';            // cognitive buffer is whole-engine state
+const RESTART_TOUCH_OWNER = 'self';              // restart affects the whole engine
 const ALLOWED_STATUS = new Set(['pending','in_progress','code-done','completed','blocked','suspended']);
 const TASK_NOTES_MAX_LINES = 20;                 // cap notes history per task to prevent unbounded growth
+
+// Module-level latch: once a restart is armed in this process, ignore further
+// RESTART_TOUCH hints so a repeated hint inside the same turn (or a quick
+// follow-up turn) doesn't reschedule exit timers or rewrite flag files.
+let __restartArmed = false;
 
 // ────────────────────────────────────────────────────────────────────────────
 // pulse_hint_log audit helper
@@ -211,6 +217,84 @@ export function writeCognitiveTouches(engine, hints) {
     }
   }
   return { appended, linesKept: last.linesKept, bytes: last.bytes };
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// RESTART_TOUCH
+
+/**
+ * Arm a controlled engine restart. Writes the same flag files that /restart
+ * uses (`.restart-requested` + `.restart-reason`) so the start.sh watchdog
+ * relaunches with full continuation, then schedules `process.exit(0)` after
+ * `delay_ms` (clamped to [500, 10000]). Idempotent within a process via the
+ * module-level latch — repeated hints during the same lifetime are no-ops.
+ *
+ * The caller is responsible for aborting active turns / notifying Mímir; this
+ * writer only owns the flag-file + exit half. The dispatcher in main.js wires
+ * those side-effects via the `lifecycle` callbacks param.
+ *
+ * @param {object} engine - ConstellationEngine instance (for db access)
+ * @param {Array<{reason:string, delay_ms:number}>} hints
+ * @param {{onArm?:Function}} [lifecycle] - optional callbacks
+ * @returns {{armed:boolean, reason?:string, delay_ms?:number, already?:boolean}}
+ */
+export function writeRestartTouch(engine, hints, lifecycle = {}) {
+  if (!engine?.db || !Array.isArray(hints) || hints.length === 0) {
+    return { armed: false };
+  }
+  if (__restartArmed) {
+    const h = hints[0];
+    logPulseHint(engine.db, {
+      kind: 'restart-touch',
+      owner_id: RESTART_TOUCH_OWNER,
+      target_kind: 'process',
+      target_id: 'engine',
+      payload: { ...h, applied: false, reason_skipped: 'already_armed' },
+      severity: 'struct',
+    });
+    return { armed: false, already: true };
+  }
+  const h = hints[0];
+  const reason = (h.reason || 'agent-self-trigger').slice(0, 200);
+  const delay_ms = Math.max(500, Math.min(Number(h.delay_ms) || 2000, 10000));
+
+  const projectDir = resolve(__dirname, '..');
+  try {
+    writeFileSync(resolve(projectDir, '.restart-requested'), '1');
+    writeFileSync(resolve(projectDir, '.restart-reason'), reason);
+  } catch (e) {
+    console.warn(`[restart-touch] flag write failed: ${e.message}`);
+    logPulseHint(engine.db, {
+      kind: 'restart-touch',
+      owner_id: RESTART_TOUCH_OWNER,
+      target_kind: 'process',
+      target_id: 'engine',
+      payload: { ...h, applied: false, reason_skipped: 'flag_write_failed', error: e.message },
+      severity: 'struct',
+    });
+    return { armed: false };
+  }
+
+  __restartArmed = true;
+  logPulseHint(engine.db, {
+    kind: 'restart-touch',
+    owner_id: RESTART_TOUCH_OWNER,
+    target_kind: 'process',
+    target_id: 'engine',
+    payload: { reason, delay_ms, applied: true },
+    severity: 'struct',
+  });
+
+  try { lifecycle.onArm?.({ reason, delay_ms }); }
+  catch (e) { console.warn(`[restart-touch] onArm callback threw: ${e.message}`); }
+
+  console.log(`[restart-touch] armed — reason="${reason}" delay=${delay_ms}ms`);
+  setTimeout(() => {
+    console.log('[restart-touch] firing process.exit(0) — start.sh will respawn');
+    process.exit(0);
+  }, delay_ms);
+
+  return { armed: true, reason, delay_ms };
 }
 
 // ────────────────────────────────────────────────────────────────────────────

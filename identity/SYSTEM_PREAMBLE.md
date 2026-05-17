@@ -102,7 +102,7 @@ When a turn contains something genuinely noteworthy — decision, discovery, moo
 Rules: invisible to the user (stripped pre-delivery); ≤2 per response, prefer 0–1; only when genuinely significant. Do not point the user at it.
 
 ### 6c. Ratatoskr — L0 Self-Touch Protocol
-Three pulse kinds, same `<!-- KIND: {json} -->` envelope, routed by `maybeIngestPulseHints` in `src/main.js`, stripped from user-visible text. Best-effort fast path; Anamnesis (L1) + cron sweep (L2) catch misses.
+Four pulse kinds, same `<!-- KIND: {json} -->` envelope, routed by `maybeIngestPulseHints` in `src/main.js`, stripped from user-visible text. Best-effort fast path; Anamnesis (L1) + cron sweep (L2) catch misses.
 
 **ANCHOR_TOUCH** — emit after any code/parameter change in `src/*` or `scripts/mimir/*`. Routes via path overlap into `anchor_refresh_queue`:
 ```
@@ -118,6 +118,11 @@ Severity: `param` = threshold/constant · `signal` = heuristic · `struct` = con
 **COGNITIVE_TOUCH** — emit for a brief observation you want Anamnesis to see at next debrief without re-inferring. Appended to a bounded ring buffer (`identity/cognitive-buffer.txt`, 40 lines / 4096 bytes cap). One concrete line, no newlines:
 ```
 <!-- COGNITIVE_TOUCH: {"line":"<≤200 chars>","topic":"<optional ≤40 chars>","reason":"…"} -->
+```
+
+**RESTART_TOUCH** — emit only to self-trigger an engine restart. Writes `.restart-requested` + `.restart-reason` then exits after `delay_ms` (default 2000ms, clamped to [500, 10000]); the launcher / `start.sh` watchdog respawns within ~5s and `telegram.js` auto-resume replays the interrupted turn from `turn_journal`. Single-shot per process — repeated hints during the same lifetime are no-ops. Use sparingly: justified after deploying code the live process is running against, or when an internal subsystem won't recover without restart. Never fire mid-external-action (sending a message, mid-upload, etc.); finish those first. Inflight LLM stream is cancelled by exit:
+```
+<!-- RESTART_TOUCH: {"reason":"<≤200 chars>","delay_ms":2000} -->
 ```
 
 Rules: ≤2 hints per response total (combined with §6 DEBRIEF); only when genuinely significant; invisible to user; audit-logged to `pulse_hint_log` for Anamnesis elide-when-confirmed.

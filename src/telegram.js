@@ -1526,8 +1526,8 @@ export class TelegramBot extends EventEmitter {
         let displayBuffer = draftBuffer.trimEnd()
           .replace(/<!--\s*DEBRIEF:\s*\{[^}]+\}\s*-->/g, '')  // complete hints
           .replace(/<!--\s*DEBRIEF:[^>]*$/s, '')                // partial hint at end of stream
-          .replace(/<!--\s*(?:ANCHOR|TASK|COGNITIVE)_TOUCH:[\s\S]+?-->/g, '')   // Ratatoskr L0 (complete)
-          .replace(/<!--\s*(?:ANCHOR|TASK|COGNITIVE)_TOUCH:[\s\S]*$/s, '');     // Ratatoskr L0 (partial at stream end)
+          .replace(/<!--\s*(?:ANCHOR|TASK|COGNITIVE|RESTART)_TOUCH:[\s\S]+?-->/g, '')   // Ratatoskr L0 (complete)
+          .replace(/<!--\s*(?:ANCHOR|TASK|COGNITIVE|RESTART)_TOUCH:[\s\S]*$/s, '');     // Ratatoskr L0 (partial at stream end)
         if (!displayBuffer.trim()) return;
         const html = markdownToHtml(displayBuffer);
         const truncated = html.slice(0, TELEGRAM_MAX_LENGTH - 20);
@@ -1569,8 +1569,8 @@ export class TelegramBot extends EventEmitter {
               const plain = draftBuffer.trimEnd()
                 .replace(/<!--\s*DEBRIEF:\s*\{[^}]+\}\s*-->/g, '')
                 .replace(/<!--\s*DEBRIEF:[^>]*$/s, '')
-                .replace(/<!--\s*(?:ANCHOR|TASK|COGNITIVE)_TOUCH:[\s\S]+?-->/g, '')
-                .replace(/<!--\s*(?:ANCHOR|TASK|COGNITIVE)_TOUCH:[\s\S]*$/s, '');
+                .replace(/<!--\s*(?:ANCHOR|TASK|COGNITIVE|RESTART)_TOUCH:[\s\S]+?-->/g, '')
+                .replace(/<!--\s*(?:ANCHOR|TASK|COGNITIVE|RESTART)_TOUCH:[\s\S]*$/s, '');
               if (!plain.trim()) return;
               const plainWithCursor = plain.slice(0, TELEGRAM_MAX_LENGTH - 20) + ' ▍';
               if (!draftMsgId) {
@@ -1667,8 +1667,8 @@ export class TelegramBot extends EventEmitter {
           const cleanFirst = firstPart.trimEnd()
             .replace(/<!--\s*DEBRIEF:\s*\{[^}]+\}\s*-->/g, '')
             .replace(/<!--\s*DEBRIEF:[^>]*$/s, '')
-            .replace(/<!--\s*(?:ANCHOR|TASK|COGNITIVE)_TOUCH:[\s\S]+?-->/g, '')
-            .replace(/<!--\s*(?:ANCHOR|TASK|COGNITIVE)_TOUCH:[\s\S]*$/s, '');
+            .replace(/<!--\s*(?:ANCHOR|TASK|COGNITIVE|RESTART)_TOUCH:[\s\S]+?-->/g, '')
+            .replace(/<!--\s*(?:ANCHOR|TASK|COGNITIVE|RESTART)_TOUCH:[\s\S]*$/s, '');
           const html = markdownToHtml(cleanFirst);
           ctx.api.editMessageText(ctx.chat.id, draftMsgId, html.slice(0, TELEGRAM_MAX_LENGTH), { parse_mode: 'HTML' }).catch(() => {});
           draftMsgId = null; // next flush will create a new message
@@ -1699,8 +1699,8 @@ export class TelegramBot extends EventEmitter {
             const cleanBuf = draftBuffer.trimEnd()
               .replace(/<!--\s*DEBRIEF:\s*\{[^}]+\}\s*-->/g, '')
               .replace(/<!--\s*DEBRIEF:[^>]*$/s, '')
-              .replace(/<!--\s*(?:ANCHOR|TASK|COGNITIVE)_TOUCH:[\s\S]+?-->/g, '')
-              .replace(/<!--\s*(?:ANCHOR|TASK|COGNITIVE)_TOUCH:[\s\S]*$/s, '');
+              .replace(/<!--\s*(?:ANCHOR|TASK|COGNITIVE|RESTART)_TOUCH:[\s\S]+?-->/g, '')
+              .replace(/<!--\s*(?:ANCHOR|TASK|COGNITIVE|RESTART)_TOUCH:[\s\S]*$/s, '');
             const html = markdownToHtml(cleanBuf);
             const truncated = html.slice(0, TELEGRAM_MAX_LENGTH);
             if (draftMsgId) {
@@ -1937,7 +1937,7 @@ export class TelegramBot extends EventEmitter {
         sessionId,
         text: (result.response || '')
           .replace(/<!--\s*DEBRIEF:\s*\{[^}]+\}\s*-->/g, '')
-          .replace(/<!--\s*(?:ANCHOR|TASK|COGNITIVE)_TOUCH:[\s\S]+?-->/g, '')
+          .replace(/<!--\s*(?:ANCHOR|TASK|COGNITIVE|RESTART)_TOUCH:[\s\S]+?-->/g, '')
           .slice(0, 2000),
         responseLength: result.response?.length || 0,
         toolRounds: result.toolRounds,
@@ -2083,7 +2083,7 @@ export class TelegramBot extends EventEmitter {
     }
     // Strip Ratatoskr L0 self-touch markers (anchor / task / cognitive — engine-only)
     if (text.includes('TOUCH:')) {
-      text = text.replace(/<!--\s*(?:ANCHOR|TASK|COGNITIVE)_TOUCH:[\s\S]+?-->/g, '').trim();
+      text = text.replace(/<!--\s*(?:ANCHOR|TASK|COGNITIVE|RESTART)_TOUCH:[\s\S]+?-->/g, '').trim();
     }
     const chunks = formatResponseChunks(text, {
       maxLen: this.#config.maxMessageLength,

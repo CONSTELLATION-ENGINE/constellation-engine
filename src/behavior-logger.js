@@ -40,6 +40,7 @@ const HINT_RE = /<!--\s*DEBRIEF:\s*(\{[^}]+\})\s*-->/g;
 // its own payload schema; see extract*Touches methods below.
 const TASK_TOUCH_RE      = /<!--\s*TASK_TOUCH:\s*([\s\S]+?)\s*-->/g;
 const COGNITIVE_TOUCH_RE = /<!--\s*COGNITIVE_TOUCH:\s*([\s\S]+?)\s*-->/g;
+const RESTART_TOUCH_RE   = /<!--\s*RESTART_TOUCH:\s*([\s\S]+?)\s*-->/g;
 // Combined detector: cheap pre-test before per-kind regex scans.
 const ANY_TOUCH_PROBE = 'TOUCH:';
 
@@ -706,8 +707,34 @@ export class BehaviorLogger {
     return out;
   }
 
+  /**
+   * Extract RESTART_TOUCH self-marked hints (Ratatoskr L0). Schema:
+   *   { reason: string (≤200 chars), delay_ms?: number (clamped to [500, 10000]) }
+   * Multi-hint responses keep only the first valid entry — restart is single-shot.
+   * @param {string} text
+   * @returns {Array<{reason:string, delay_ms:number}>}
+   */
+  static extractRestartTouches(text) {
+    if (!text || !text.includes('RESTART_TOUCH:')) return [];
+    const out = [];
+    let m;
+    RESTART_TOUCH_RE.lastIndex = 0;
+    while ((m = RESTART_TOUCH_RE.exec(text)) !== null) {
+      try {
+        const p = JSON.parse(m[1]);
+        if (typeof p?.reason !== 'string' || !p.reason.trim()) continue;
+        const reason = p.reason.replace(/[\r\n]+/g, ' ').trim().slice(0, 200);
+        let delay_ms = Number.isFinite(p.delay_ms) ? Math.round(p.delay_ms) : 2000;
+        delay_ms = Math.max(500, Math.min(delay_ms, 10000));
+        out.push({ reason, delay_ms });
+        break;   // single-shot — first valid hint wins
+      } catch { /* malformed — skip */ }
+    }
+    return out;
+  }
+
   // Note: per-channel strip sites (telegram.js / dashboard.js / conversation-logger.js)
-  // use inline regex `/<!--\s*(?:TASK|COGNITIVE)_TOUCH:[\s\S]+?-->/g`
+  // use inline regex `/<!--\s*(?:TASK|COGNITIVE|RESTART)_TOUCH:[\s\S]+?-->/g`
   // — same pattern as ANY_TOUCH_PROBE above. A central helper would force every
   // user-facing channel to import BehaviorLogger as a value (currently only
   // main.js does), so we keep the regex co-located with each channel's strip

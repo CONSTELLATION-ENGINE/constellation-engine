@@ -231,7 +231,7 @@ export function hookRuntime(runtime) {
     // Log assistant response
     logMessage('assistant', (response || '')
       .replace(/<!--\s*DEBRIEF:\s*\{[^}]+\}\s*-->/g, '')
-      .replace(/<!--\s*(?:ANCHOR|TASK|COGNITIVE)_TOUCH:[\s\S]+?-->/g, ''), {
+      .replace(/<!--\s*(?:ANCHOR|TASK|COGNITIVE|RESTART)_TOUCH:[\s\S]+?-->/g, ''), {
       sessionId, 
       model,
       tokens: tokensUsed,
