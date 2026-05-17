@@ -1175,7 +1175,7 @@ ipcMain.handle('permission:open-policy', () => {
       }
     } catch {}
   }
-  shell.openExternal('https://github.com/devinrory-collab/constellation-engine/blob/main/PERMISSIONS.md');
+  shell.openExternal('https://github.com/CONSTELLATION-ENGINE/constellation-engine/blob/main/PERMISSIONS.md');
   return { ok: true, fallback: 'github' };
 });
 
@@ -1804,7 +1804,7 @@ ipcMain.handle('onboarding:open-engine-logs', async () => {
 
 // Issue tracker.
 ipcMain.handle('onboarding:report-issue', () => {
-  shell.openExternal('https://github.com/devinrory-collab/constellation-engine/issues/new');
+  shell.openExternal('https://github.com/CONSTELLATION-ENGINE/constellation-engine/issues/new');
   return { ok: true };
 });
 
@@ -2199,7 +2199,7 @@ async function boot() {
 //
 // Guarded by app.isPackaged — dev runs (`npm start`) skip the updater entirely.
 // GitHub Releases is the publish channel; repo handle comes from env GH_REPO
-// (default devinrory-collab/constellation-engine) so users on a fork can repoint
+// (default CONSTELLATION-ENGINE/constellation-engine) so users on a fork can repoint
 // without rebuilding. Single `latest` channel, no separate beta/insider.
 //
 // Unsigned binaries: SmartScreen / Gatekeeper warnings are skippable on first
@@ -2244,7 +2244,7 @@ function setupAutoUpdater() {
   // Repo override — env beats the build-time publish config so a fork can
   // point at its own releases without re-bundling. Malformed env (no slash)
   // falls back to the build-time publish block instead of throwing.
-  const repo = process.env.GH_REPO || 'devinrory-collab/constellation-engine';
+  const repo = process.env.GH_REPO || 'CONSTELLATION-ENGINE/constellation-engine';
   const [owner, name] = repo.split('/');
   if (owner && name) {
     try {

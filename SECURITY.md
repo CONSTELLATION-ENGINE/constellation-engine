@@ -6,7 +6,7 @@ We take security issues seriously and appreciate your help in keeping users safe
 
 **Do not** open a public GitHub issue for security problems. Instead, use one of the private channels below:
 
-- **GitHub Private Vulnerability Reporting**: open a report via the [Security tab](https://github.com/devinrory-collab/constellation-engine/security/advisories/new) on this repository. This is the preferred channel.
+- **GitHub Private Vulnerability Reporting**: open a report via the [Security tab](https://github.com/CONSTELLATION-ENGINE/constellation-engine/security/advisories/new) on this repository. This is the preferred channel.
 
 When reporting, please include:
 

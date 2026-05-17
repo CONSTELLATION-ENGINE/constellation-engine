@@ -18,7 +18,7 @@
 
 ### End users (Windows / macOS)
 
-Download the latest installer from the [GitHub Releases](https://github.com/devinrory-collab/constellation-engine/releases) page and run it. The desktop app launches a setup wizard that walks you through provider keys, your agent's foundational identity prompt (the **soul core** — see below), and (optionally) memory import. SQLite ships bundled — no system database install required.
+Download the latest installer from the [GitHub Releases](https://github.com/CONSTELLATION-ENGINE/constellation-engine/releases) page and run it. The desktop app launches a setup wizard that walks you through provider keys, your agent's foundational identity prompt (the **soul core** — see below), and (optionally) memory import. SQLite ships bundled — no system database install required.
 
 ### Developers (clone & run)
 
@@ -111,8 +111,8 @@ In summary: you can run, modify, and redistribute this software, but any network
 
 ## Community
 
-- **Issues & feedback**: [GitHub issues](https://github.com/devinrory-collab/constellation-engine/issues)
-- **Discussions**: [GitHub discussions](https://github.com/devinrory-collab/constellation-engine/discussions)
+- **Issues & feedback**: [GitHub issues](https://github.com/CONSTELLATION-ENGINE/constellation-engine/issues)
+- **Discussions**: [GitHub discussions](https://github.com/CONSTELLATION-ENGINE/constellation-engine/discussions)
 - **Security**: For security disclosures, see [SECURITY.md](./SECURITY.md)
 
 ---

@@ -161,7 +161,7 @@ Found a bug? Please include:
 
 ## Questions?
 
-- Check [existing issues](https://github.com/devinrory-collab/constellation-engine/issues) first
-- Open a [discussion](https://github.com/devinrory-collab/constellation-engine/discussions) for design questions
+- Check [existing issues](https://github.com/CONSTELLATION-ENGINE/constellation-engine/issues) first
+- Open a [discussion](https://github.com/CONSTELLATION-ENGINE/constellation-engine/discussions) for design questions
 
 Thanks for contributing.

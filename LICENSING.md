@@ -64,5 +64,5 @@ documented in `src/dashboard.js`).
 
 ## Questions
 
-Open an issue at <https://github.com/devinrory-collab/constellation-engine> or email
+Open an issue at <https://github.com/CONSTELLATION-ENGINE/constellation-engine> or email
 the maintainer.

@@ -12,7 +12,7 @@
  */
 
 const DOCS_URL = 'https://constellation-engine.com';
-const SOURCE_URL = 'https://github.com/devinrory-collab/constellation-engine';
+const SOURCE_URL = 'https://github.com/CONSTELLATION-ENGINE/constellation-engine';
 
 export function buildHTML(_authToken, _identity = null) {
   return `<!DOCTYPE html>
