@@ -32,6 +32,7 @@ import {
   updateDiaryMeta, updateDiaryMetaIfNull, getFireDiaryIdBySession,
   pruneObservation, actionDistribution,
   buildReflectionContext, isVecAvailable as diaryVecReady,
+  logLibraryRead, updateLibraryReadDigest,
 } from './diary.js';
 import { reconsolidateBatch, reconsolidationStatus } from './reconsolidate.js';
 import { runDreamCycle, startDreamLoop, stopDreamLoop, noteUserActivity, dreamStatus } from './dream.js';
@@ -824,14 +825,45 @@ route('POST', '/library_fetch', async (req, res) => {
     }
 
     const relOut = target.slice(libraryRoot.length + 1) || target;
+    const bytes = Buffer.byteLength(text, 'utf8');
+
+    let pageCount = null;
+    if (kind === 'pdf') {
+      try {
+        const info = spawnSync('pdfinfo', [target], {
+          encoding: 'utf8',
+          timeout: 10_000,
+        });
+        if (info.status === 0 && info.stdout) {
+          const m = info.stdout.match(/^Pages:\s+(\d+)/m);
+          if (m) pageCount = parseInt(m[1], 10);
+        }
+      } catch {}
+    }
+
+    let logId = null;
+    try {
+      const origin = (typeof body.origin === 'string' && body.origin.trim())
+        ? body.origin.trim() : 'library_fetch';
+      logId = logLibraryRead({
+        path: relOut,
+        mode: 'actions',
+        origin,
+        meta: { kind, truncated, bytes },
+        pageCount,
+      });
+    } catch (e) {
+      console.warn('[mimir-js] library_read_log write failed:', e.message);
+    }
+
     send(res, 200, {
       ok: true,
       path: relOut,
       kind,
-      bytes: Buffer.byteLength(text, 'utf8'),
+      bytes,
       truncated,
       text,
-      log_id: null,
+      log_id: logId,
     });
   } catch (e) {
     send(res, 500, { ok: false, error: e.message });

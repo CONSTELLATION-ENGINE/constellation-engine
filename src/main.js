@@ -239,6 +239,10 @@ function scaffoldRuntimeDirs(repoRoot) {
     'engine-inbox/uploads',
     'engine-inbox/uploads/images',
     'library',
+    'data',
+    'data/logs',
+    'data/logs/ir-pool',
+    'data/compiler-training',
   ];
   for (const d of dirs) {
     try { mkdirSync(resolve(repoRoot, d), { recursive: true }); } catch {}

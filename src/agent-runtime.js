@@ -1026,7 +1026,8 @@ export class AgentRuntime extends EventEmitter {
           };
           const fs = await import('node:fs');
           const path = await import('node:path');
-          const trainingDir = path.join(process.cwd(), 'data', 'compiler-training');
+          const trainingDir = resolve(__dirname_rt, '..', 'data', 'compiler-training');
+          if (!existsSync(trainingDir)) mkdirSync(trainingDir, { recursive: true });
           const dateStr = new Date().toISOString().slice(0, 10);
           const filePath = path.join(trainingDir, `training-${dateStr}.jsonl`);
           await fs.promises.appendFile(filePath, JSON.stringify(trainingEntry) + '\n');

@@ -53,7 +53,36 @@ function _initSchema() {
     CREATE INDEX IF NOT EXISTS ix_diary_ts    ON diary_entries(ts);
     CREATE INDEX IF NOT EXISTS ix_diary_kind  ON diary_entries(kind);
     CREATE INDEX IF NOT EXISTS ix_diary_owner ON diary_entries(owner_id);
+
+    CREATE TABLE IF NOT EXISTS library_read_log (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      ts          INTEGER NOT NULL,
+      owner_id    TEXT NOT NULL,
+      path        TEXT NOT NULL,
+      mode        TEXT NOT NULL,
+      origin      TEXT NOT NULL,
+      diary_id    INTEGER,
+      meta        TEXT,
+      page_count  INTEGER,
+      digest      TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_library_read_log_path_ts  ON library_read_log(path, ts DESC);
+    CREATE INDEX IF NOT EXISTS idx_library_read_log_owner_ts ON library_read_log(owner_id, ts DESC);
   `);
+
+  try {
+    const cols = new Set(
+      db.prepare('PRAGMA table_info(library_read_log)').all().map(r => r.name)
+    );
+    if (!cols.has('page_count')) {
+      db.exec('ALTER TABLE library_read_log ADD COLUMN page_count INTEGER');
+    }
+    if (!cols.has('digest')) {
+      db.exec('ALTER TABLE library_read_log ADD COLUMN digest TEXT');
+    }
+  } catch (e) {
+    console.warn('[mimir-js diary] library_read_log column add skipped:', e.message);
+  }
 
   // Mímir v4 Phase 0: nodes.fire_count is bumped from /session_end after the
   // picker's candidate_id is back-filled. The earlier insert-time trigger
@@ -326,6 +355,56 @@ export function pruneDiary(maxAgeDays = 90) {
     return db.prepare('DELETE FROM diary_entries WHERE ts < ?').run(cutoff).changes;
   });
   return txn();
+}
+
+// Append one library_read_log event (one row per successful library_fetch fire).
+// Caller writes only on confirmed read success — no upserts, no backfill.
+// page_count/digest are L1 enhancements: page_count from pdfinfo at fire time;
+// digest filled later via updateLibraryReadDigest().
+export function logLibraryRead({
+  path,
+  mode,
+  origin,
+  diaryId = null,
+  ownerId = 'self',
+  meta = null,
+  ts = null,
+  pageCount = null,
+  digest = null,
+} = {}) {
+  if (KILL) return null;
+  if (!path || !mode || !origin) {
+    throw new Error('log_library_read requires path, mode, origin');
+  }
+  _initSchema();
+  const db = getDb();
+  const now = Math.floor(Date.now() / 1000);
+  const tsVal = Number.isFinite(ts) ? Math.floor(ts) : now;
+  const metaJson = meta ? JSON.stringify(meta) : null;
+  const info = db.prepare(
+    `INSERT INTO library_read_log
+       (ts, owner_id, path, mode, origin, diary_id, meta, page_count, digest)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    tsVal, ownerId, String(path), String(mode), String(origin),
+    Number.isInteger(diaryId) ? diaryId : null,
+    metaJson,
+    Number.isFinite(pageCount) ? Math.floor(pageCount) : null,
+    digest != null ? String(digest) : null,
+  );
+  return Number(info.lastInsertRowid);
+}
+
+// Backfill digest on an existing library_read_log row. Returns true on touch.
+export function updateLibraryReadDigest(logId, digest) {
+  if (KILL) return false;
+  if (!Number.isInteger(logId) || logId <= 0) return false;
+  _initSchema();
+  const db = getDb();
+  const info = db.prepare(
+    'UPDATE library_read_log SET digest = ? WHERE id = ?'
+  ).run(digest != null ? String(digest) : null, logId);
+  return info.changes > 0;
 }
 
 // Reflection context: assemble recent activity for a daily-reflection prompt.

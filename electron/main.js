@@ -1977,6 +1977,10 @@ async function scaffoldRuntimeDirs(targetDir) {
     'engine-inbox/uploads',
     'engine-inbox/uploads/images',
     'library',
+    'data',
+    'data/logs',
+    'data/logs/ir-pool',
+    'data/compiler-training',
   ];
   for (const d of dirs) {
     try { await fsp.mkdir(path.join(targetDir, d), { recursive: true }); } catch {}
