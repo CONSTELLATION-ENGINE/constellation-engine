@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS edges (
 
   -- Bi-temporal columns (phase1a). valid_to IS NULL = currently valid.
   -- engine.cjs _bitemporalSqlClause filters reads by this.
-  valid_from            INTEGER,
+  valid_from            INTEGER DEFAULT (CAST((julianday('now')-2440587.5)*86400000 AS INTEGER)),
   valid_to              INTEGER,
   superseded_by         INTEGER
 );

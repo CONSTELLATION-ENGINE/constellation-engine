@@ -14,6 +14,8 @@
 import { getDb, getMeta } from './db.js';
 import * as sa from './sa.js';
 import * as zones from './zones.js';
+import { hebbStatus } from './hebb.js';
+import { ruminationStatus } from './rumination.js';
 
 const DEFAULT_POOL_SIZE = 60;
 const DEFAULT_LLM_INJECT_LIMIT = 65;
@@ -202,6 +204,8 @@ export function getStatus() {
       top_activations: [], top_nodes: [],
       zones: [], top_zones: [],
       backend: 'mimir-js', version: '0.1.0', db_ready: false,
+      rumination_enabled: (() => { try { return ruminationStatus().enabled; } catch { return null; } })(),
+      novelty_gate_enabled: (() => { try { return hebbStatus().novelty_gate_enabled; } catch { return null; } })(),
     };
   }
   let activeCount = 0;
@@ -253,5 +257,7 @@ export function getStatus() {
     db_ready: true,
     sa: sa.saStats(),
     leiden: zones.zoneStats(),
+    rumination_enabled: (() => { try { return ruminationStatus().enabled; } catch { return null; } })(),
+    novelty_gate_enabled: (() => { try { return hebbStatus().novelty_gate_enabled; } catch { return null; } })(),
   };
 }

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (r26)
+- **`/status` payload surfaces mechanism toggles**: `rumination_enabled` and `novelty_gate_enabled` now read out of `getStatus()` alongside `sa` and `leiden`, so dashboards can pull mechanism state from one endpoint without polling `/rumination/status` and `/hebb/status` separately. `/config` GET/POST still authoritative for runtime flips.
+
+### Fixed (r26)
+- **`edges.valid_from` now defaults to current epoch-ms on INSERT** (`schema.sql`). Bi-temporal reads filter on `valid_from`, and main-arch installs got the default expression via `migrate_phase1c`; OSS shipped without it, so rows from any INSERT path that didn't explicitly stamp `valid_from` would land NULL and silently fall out of the time-window filter. New `DEFAULT (CAST((julianday('now')-2440587.5)*86400000 AS INTEGER))` matches main-arch behavior.
+
 ### Added (r25)
 - **Predictive priming** ported to `mimir-js/sa.js` (Python parity: `SIGNAL_HISTORY_SIZE=20`, `PRIMING_STRENGTH=0.08`, `PRIMING_DECAY=0.97`). After every `/signal` injection, current `A_fast` is snapshotted into a per-instance signal history. Each tick predicts the next-likely activation pattern via cosine-similarity-weighted average of "what came after past signals like this one" and pre-warms those nodes through the same 3-channel fusion weights as the forward pass. Already-active nodes are damped 10× to push priming outward into unexplored space. Kill-switch: `MIMIR_PRIMING=0`. Default-ON.
 - **Reverse propagation** ported to `mimir-js/sa.js` (Python parity: `REVERSE_PROPAGATION_SCALE=0.15`, `DIRECTED_EDGE_TYPES` = supports/extends/exemplifies/contains/depends_on/enables/causes/inspires/supersedes). Per-channel reverse CSR matrices built alongside forward CSR during `_buildState()`; each tick adds a fusion-weighted backward diffusion pass so activation flows effect→cause along directed edges (abductive reasoning substrate). Kill-switch: `MIMIR_REVERSE_PROP=0`. Default-ON.
