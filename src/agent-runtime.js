@@ -1846,6 +1846,21 @@ export class AgentRuntime extends EventEmitter {
           // ⭐ only ~5.7% of turns, so the tier carried almost no signal. Rank-based
           // keeps the top/mid/weak distinction informative at any activation level.
           let knowledgePoolRank = 0;
+          // Force top-N dynamic (non-permanent) nodes to precision='full' regardless
+          // of activation. Targets node-fragmentation hallucinations: the most
+          // relevant nodes per turn often sit at medium precision (single-line
+          // emoji template) which strips the body content the model needs to
+          // ground copy. Permanents already get full; top-N adds the highest-
+          // signal dynamics. OSS lacks streaming IR — poolNodes is rerank-ordered
+          // (cosine desc) after Plan E, so first-N non-permanent is the right pick.
+          const TOP_N_FORCE_FULL = Number(process.env.POOL_TOP_N_FORCE_FULL ?? 7);
+          const _topNFullSet = new Set();
+          if (TOP_N_FORCE_FULL > 0) {
+            const _dyns = poolNodes.filter(n => !n.permanent);
+            for (let i = 0; i < Math.min(TOP_N_FORCE_FULL, _dyns.length); i++) {
+              _topNFullSet.add(_dyns[i].id);
+            }
+          }
           if (this.#engine && this.#engine.db) {
             try {
               const ids = poolNodes.map(n => n.id);
@@ -1879,7 +1894,10 @@ export class AgentRuntime extends EventEmitter {
                     ? (updatedDay && updatedDay !== createdDay ? ` ${createdDay} ↻${updatedDay}` : ` ${createdDay}`)
                     : '';
                   const nodeType = row.node_type || 'knowledge';
-                  const precision = selectPrecision(n.activation, nodeType);
+                  let precision = selectPrecision(n.activation, nodeType);
+                  if (!n.permanent && _topNFullSet.has(n.id) && precision !== 'full') {
+                    precision = 'full';
+                  }
                   const renderedContent = renderNode({ id: n.id, l0: row.l0, l1: row.l1, l2: row.l2, node_type: nodeType }, precision);
                   const supersededTag = row.superseded_at
                     ? ` ⚠️SUPERSEDED${row.superseded_by ? ' by:' + row.superseded_by : ''}`
