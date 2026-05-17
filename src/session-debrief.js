@@ -1168,6 +1168,10 @@ Note: the \`slug\` field must be **ASCII kebab-case** (3-5 English words, lowerc
   }
 
   #backupAndWrite(path, content) {
+    // Parent must exist or writeFileSync throws ENOENT. Bare standalone boots
+    // can land here before any other path created identity/, so guard every
+    // write — cheap and idempotent.
+    try { mkdirSync(dirname(path), { recursive: true }); } catch {}
     try {
       copyFileSync(path, path + BACKUP_SUFFIX);
     } catch {

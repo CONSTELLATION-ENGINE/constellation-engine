@@ -58,9 +58,35 @@ const FUSE_WEIGHTS = [0.50, 0.25, 0.25];   // K dominant, L+S balanced
 const REBUILD_MS = 5 * 60 * 1000;
 const MAX_NODES = 5000;           // cap so big graphs don't OOM the worker
 
+// Reverse propagation (Python: REVERSE_PROPAGATION_SCALE=0.15). Backward flow
+// along directed edges enables abductive reasoning (effect → possible causes).
+const REVERSE_PROPAGATION_SCALE = 0.15;
+const DIRECTED_EDGE_TYPES = new Set([
+  'supports', 'extends', 'exemplifies', 'contains', 'depends_on',
+  'enables', 'causes', 'inspires', 'supersedes',
+]);
+
+// Predictive priming (Python: SIGNAL_HISTORY_SIZE=20, PRIMING_STRENGTH=0.08,
+// PRIMING_DECAY=0.97). Predicts next-topic nodes from signal transition history.
+const SIGNAL_HISTORY_SIZE = 20;
+const PRIMING_STRENGTH = 0.08;
+const PRIMING_DECAY = 0.97;
+const PRIMING_SIM_THRESHOLD = 0.3;     // skip past signals below this cosine sim
+const PRIMING_RECENCY_BASE = 0.95;     // weight = sim · recency_base^(age)
+const PRIMING_MIN_MAX = 1e-5;          // null vector when peak below floor
+
 let _state = null;
 let _alphaScale = 1.0;            // turn_signal alpha modulator, ∈[0.5, 2.0]
 let _lastLoggedShape = null;      // {N, edgeCount} of last printed rebuild
+
+// Default-ON kill-switches (Python parity: both true by default in self.*_enabled).
+let _reversePropEnabled = String(process.env.MIMIR_REVERSE_PROP || '1').trim() !== '0';
+let _primingEnabled = String(process.env.MIMIR_PRIMING || '1').trim() !== '0';
+
+export function setReversePropEnabled(v) { _reversePropEnabled = !!v; }
+export function setPrimingEnabled(v) { _primingEnabled = !!v; }
+export function isReversePropEnabled() { return _reversePropEnabled; }
+export function isPrimingEnabled() { return _primingEnabled; }
 
 export function setAlphaScale(v) {
   if (Number.isFinite(v) && v >= 0.3 && v <= 3.0) _alphaScale = v;
@@ -112,10 +138,16 @@ function _buildState() {
   // Per-channel adjacency lists (will convert to CSR for fast matvec).
   const adj = [[], [], []];
   for (let c = 0; c < 3; c++) for (let i = 0; i < N; i++) adj[c].push([]);
+  // Reverse adjacency: only directed edge types, only along the reverse
+  // direction (j→i). Per-channel just like forward so reverse flow respects
+  // channel boundaries (Python: W_reverse_sa).
+  const revAdj = [[], [], []];
+  for (let c = 0; c < 3; c++) for (let i = 0; i < N; i++) revAdj[c].push([]);
 
   // Count edges that actually survive into the SA graph — separates "what's in
   // the DB" from "what drives activation" so observation panels can flag drift.
   let liveEdgeCount = 0;
+  let revEdgeCount = 0;
   for (const e of edgeRows) {
     if (!e.s || !e.t || e.s === e.t) continue;
     if (EDGE_SKIP.has(e.et)) continue;
@@ -130,9 +162,16 @@ function _buildState() {
       adj[c][i].push([j, e.w]);
       adj[c][j].push([i, e.w]);                               // undirected
     }
+    // Reverse leg: directed edges only. Scale folded into stored weight so the
+    // matvec doesn't need a per-row multiply.
+    if (DIRECTED_EDGE_TYPES.has(e.et)) {
+      const revW = e.w * REVERSE_PROPAGATION_SCALE;
+      for (const c of chans) revAdj[c][j].push([i, revW]);
+      revEdgeCount++;
+    }
   }
 
-  // CSR per channel
+  // CSR per channel — forward
   const csrPerCh = [];
   for (let c = 0; c < 3; c++) {
     let nnz = 0;
@@ -149,17 +188,37 @@ function _buildState() {
     csrPerCh.push({ rowPtr, colInd, vals, N, nnz });
   }
 
+  // CSR per channel — reverse
+  const csrRevPerCh = [];
+  for (let c = 0; c < 3; c++) {
+    let nnz = 0;
+    for (let i = 0; i < N; i++) nnz += revAdj[c][i].length;
+    const rowPtr = new Int32Array(N + 1);
+    const colInd = new Int32Array(nnz);
+    const vals = new Float32Array(nnz);
+    let k = 0;
+    for (let i = 0; i < N; i++) {
+      rowPtr[i] = k;
+      for (const [j, w] of revAdj[c][i]) { colInd[k] = j; vals[k] = w; k++; }
+    }
+    rowPtr[N] = k;
+    csrRevPerCh.push({ rowPtr, colInd, vals, N, nnz });
+  }
+
   return {
-    nodeRows, idx, csrPerCh, N,
+    nodeRows, idx, csrPerCh, csrRevPerCh, N,
     A_fast: new Float32Array(N),
     A_slow: new Float32Array(N),
     baseline: new Float32Array(N),
     A_ch: [new Float32Array(N), new Float32Array(N), new Float32Array(N)],
     massCache: new Float32Array(N),
+    signalHistory: [],          // [{sig:Float32Array, tick:number}], capped at SIGNAL_HISTORY_SIZE
+    primingVector: null,        // Float32Array(N) or null when no prediction
     lastBuilt: Date.now(),
     lastTick: 0,
     edgeCount: liveEdgeCount,
     edgeCountRaw: edgeRows.length,
+    revEdgeCount,
   };
 }
 
@@ -194,6 +253,38 @@ function _seedInput(state, nowMs) {
 
 function _tickOnce(state, I) {
   const N = state.N;
+  // Reverse propagation: pre-diffuse current A_fast backward along directed
+  // edges, per-channel weighted, added to seed before the forward decay tick.
+  // Mirrors Python: reverse_diffused = Σ_ch FUSE_WEIGHTS[ch] · α · (W_rev_ch @ A).
+  if (_reversePropEnabled && state.csrRevPerCh) {
+    const scratch = new Float32Array(N);
+    for (let c = 0; c < 3; c++) {
+      const csr = state.csrRevPerCh[c];
+      if (!csr.nnz) continue;
+      _csrMatvec(csr, state.A_fast, scratch, DIFFUSION_ALPHA);
+      const Ic = I[c];
+      const w = FUSE_WEIGHTS[c];
+      for (let i = 0; i < N; i++) Ic[i] += w * scratch[i];
+    }
+  }
+  // Predictive priming: split across channels by the same fusion weights so
+  // pre-warmed nodes don't dominate any single SA pass.
+  if (_primingEnabled && state.primingVector) {
+    const P = state.primingVector;
+    for (let c = 0; c < 3; c++) {
+      const Ic = I[c];
+      const w = FUSE_WEIGHTS[c];
+      for (let i = 0; i < N; i++) Ic[i] += w * P[i];
+    }
+    // Decay each tick. Python: priming_vector *= 0.97; null when peak < 1e-5.
+    let peak = 0;
+    for (let i = 0; i < N; i++) {
+      P[i] *= PRIMING_DECAY;
+      if (P[i] > peak) peak = P[i];
+    }
+    if (peak < PRIMING_MIN_MAX) state.primingVector = null;
+  }
+
   // Decay + add input
   for (let c = 0; c < 3; c++) {
     const A = state.A_ch[c];
@@ -258,6 +349,15 @@ export function ensureState() {
             fresh.A_ch[2][i] = _state.A_ch[2][old];
           }
         }
+        // Signal history & priming are size-N coupled — drop on topology change
+        // (Python parity: signal_history.clear(); priming_vector = None).
+        if (_state.N !== fresh.N) {
+          fresh.signalHistory = [];
+          fresh.primingVector = null;
+        } else {
+          fresh.signalHistory = _state.signalHistory;
+          fresh.primingVector = _state.primingVector;
+        }
       }
       _state = fresh;
       // Only log when graph shape changes meaningfully — avoids 5-min heartbeat
@@ -283,6 +383,67 @@ export function step() {
   const I = _seedInput(s, Date.now());
   _tickOnce(s, I);
   return s;
+}
+
+// ── Predictive priming ───────────────────────────────────────────────────────
+// Record current A_fast as a "signal" (snapshot of what just got activated).
+// Cap history at SIGNAL_HISTORY_SIZE. After recording, re-predict the priming
+// vector from transition history. Called from /signal handler after inject().
+export function recordSignal() {
+  const s = _state;
+  if (!s || !_primingEnabled) return;
+  const N = s.N;
+  // Skip silent signals (everything decayed away) so history isn't filled with
+  // near-zero vectors that the cosine similarity check would reject anyway.
+  let norm = 0;
+  for (let i = 0; i < N; i++) norm += s.A_fast[i] * s.A_fast[i];
+  if (norm < 1e-12) return;
+  const snap = new Float32Array(N);
+  snap.set(s.A_fast);
+  s.signalHistory.push({ sig: snap, tick: s.lastTick });
+  while (s.signalHistory.length > SIGNAL_HISTORY_SIZE) s.signalHistory.shift();
+  _updatePriming(s);
+}
+
+// Predict the next-likely activation pattern by averaging "what came after past
+// signals that look like the current one." Mirrors Python _update_priming().
+function _updatePriming(s) {
+  if (s.signalHistory.length < 3) { s.primingVector = null; return; }
+  const N = s.N;
+  const current = s.signalHistory[s.signalHistory.length - 1].sig;
+  let currNorm = 0;
+  for (let i = 0; i < N; i++) currNorm += current[i] * current[i];
+  currNorm = Math.sqrt(currNorm);
+  if (currNorm < 1e-4) { s.primingVector = null; return; }
+  const prediction = new Float32Array(N);
+  let totalWeight = 0;
+  for (let i = 0; i < s.signalHistory.length - 1; i++) {
+    const past = s.signalHistory[i].sig;
+    const next = s.signalHistory[i + 1].sig;
+    if (past.length !== N || next.length !== N) continue;
+    let pastNorm = 0, dot = 0;
+    for (let k = 0; k < N; k++) {
+      pastNorm += past[k] * past[k];
+      dot += past[k] * current[k];
+    }
+    pastNorm = Math.sqrt(pastNorm);
+    if (pastNorm < 1e-4) continue;
+    const sim = dot / (pastNorm * currNorm);
+    if (sim < PRIMING_SIM_THRESHOLD) continue;
+    const recency = Math.pow(PRIMING_RECENCY_BASE, s.signalHistory.length - 1 - i);
+    const weight = sim * recency;
+    for (let k = 0; k < N; k++) prediction[k] += weight * next[k];
+    totalWeight += weight;
+  }
+  if (totalWeight <= 0) { s.primingVector = null; return; }
+  // Damp already-active nodes (Python: prediction[A>0.1] *= 0.1) so priming
+  // pushes activation outward into unexplored space, not into the current pool.
+  for (let k = 0; k < N; k++) {
+    prediction[k] /= totalWeight;
+    if (s.A_fast[k] > 0.1) prediction[k] *= 0.1;
+    prediction[k] *= PRIMING_STRENGTH;
+  }
+  s.primingVector = prediction;
 }
 
 // Outside callers (e.g., /signal handler) inject targeted energy.
@@ -345,11 +506,21 @@ export function getChannelMaxes() {
 export function saStats() {
   const s = _state;
   if (!s) return { ready: false };
+  let primingPeak = 0;
+  if (s.primingVector) {
+    for (let i = 0; i < s.N; i++) if (s.primingVector[i] > primingPeak) primingPeak = s.primingVector[i];
+  }
   return {
     ready: true,
     node_count: s.N,
     edge_count: s.edgeCount,
+    reverse_edge_count: s.revEdgeCount || 0,
     last_built_ms: s.lastBuilt,
     last_tick_ms: s.lastTick,
+    reverse_prop_enabled: _reversePropEnabled,
+    priming_enabled: _primingEnabled,
+    signal_history_size: s.signalHistory ? s.signalHistory.length : 0,
+    priming_active: !!s.primingVector,
+    priming_peak: primingPeak,
   };
 }

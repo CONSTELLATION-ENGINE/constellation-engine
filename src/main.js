@@ -44,6 +44,7 @@ setGlobalDispatcher(new Agent({
 
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
 import { loadConfig, loadImmutableNodeIds } from './config.js';
 import { SessionManager } from './session.js';
 import { LLMRouter } from './llm-router.js';
@@ -226,10 +227,39 @@ async function maybeIngestPulseHints(engine, responseText, opts = {}) {
  * @param {string} [configPath] - Optional path to config.json
  * @returns {Promise<Object>} Application context with shutdown()
  */
+// Runtime-only dirs/files the engine reads but the repo doesn't ship: identity/,
+// engine-inbox/, library/, plus tasks.json + COGNITIVE_STATE.md placeholders so
+// Anamnesis writes never hit ENOENT on a bare standalone boot. Electron's main.js
+// has its own copy of this for packaged installs; this covers `node src/main.js`.
+// Idempotent — never overwrites, just creates what's missing.
+function scaffoldRuntimeDirs(repoRoot) {
+  const dirs = [
+    'identity',
+    'engine-inbox',
+    'engine-inbox/uploads',
+    'engine-inbox/uploads/images',
+    'library',
+  ];
+  for (const d of dirs) {
+    try { mkdirSync(resolve(repoRoot, d), { recursive: true }); } catch {}
+  }
+  const tasksFile = resolve(repoRoot, 'identity', 'tasks.json');
+  if (!existsSync(tasksFile)) {
+    try { writeFileSync(tasksFile, '{"tasks":[]}\n', 'utf-8'); } catch {}
+  }
+  const cogStateFile = resolve(repoRoot, 'identity', 'COGNITIVE_STATE.md');
+  if (!existsSync(cogStateFile)) {
+    try { writeFileSync(cogStateFile, '', 'utf-8'); } catch {}
+  }
+}
+
 async function boot(configPath, options = {}) {
   const cliMode = options.cliMode || false;
   const startTime = Date.now();
   console.log('🌌  Constellation Engine — booting...\n');
+
+  // ─── Step 0: Scaffold runtime dirs/files (idempotent) ─────────────────────
+  scaffoldRuntimeDirs(resolve(__dirname, '..'));
 
   // ─── Step 1: Load config ──────────────────────────────────────────────────
   console.log('  [1/10] Loading config...');

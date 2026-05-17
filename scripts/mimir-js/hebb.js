@@ -35,6 +35,21 @@ const LTD_DELTA = -0.01;
 const STRENGTH_FLOOR = 0.05;
 const STRENGTH_CAP = 1.0;
 
+// Novelty gate (Python parity: NOVELTY_GATE_THRESHOLD=0.3, NOVELTY_EMA_ALPHA=0.1).
+// Surprising co-activations strengthen; well-predicted ones don't. EMA dict is
+// pruned at EMA_MAX_SIZE to bound memory (Python ema_max_size=3000).
+const NOVELTY_GATE_THRESHOLD = 0.3;
+const NOVELTY_EMA_ALPHA = 0.1;
+const EMA_MAX_SIZE = 3000;
+const EMA_NOISE_FLOOR = 0.01;
+// Default-ON with kill-switch matching `default_on_with_killswitch` convention.
+let _noveltyGateEnabled = String(process.env.MIMIR_NOVELTY_GATE || '1').trim() !== '0';
+const _coactivationEma = new Map();  // "i|j" → EMA of co-activation product
+let _emaPrunes = 0;
+
+export function setNoveltyGateEnabled(v) { _noveltyGateEnabled = !!v; }
+export function isNoveltyGateEnabled() { return _noveltyGateEnabled; }
+
 let _intervalHandle = null;
 let _lastRunTs = 0;
 let _lastResult = null;
@@ -97,11 +112,30 @@ export async function runHebbWriteback() {
   }
 
   const pairDeltas = [];
+  let noveltySkipped = 0;
   for (let i = 0; i < activeIdx.length; i++) {
     for (let j = i + 1; j < activeIdx.length; j++) {
       const ai = A[activeIdx[i]], aj = A[activeIdx[j]];
       let delta;
-      if (ai > 0.5 && aj > 0.5) delta = LTP_DELTA;
+      if (ai > 0.5 && aj > 0.5) {
+        // Novelty gate: only LTP when co-activation surprises the EMA.
+        // EMA updates regardless of gate outcome so well-predicted pairs
+        // keep their high prediction baseline.
+        if (_noveltyGateEnabled) {
+          const key = activeIdx[i] < activeIdx[j]
+            ? `${activeIdx[i]}|${activeIdx[j]}`
+            : `${activeIdx[j]}|${activeIdx[i]}`;
+          const product = ai * aj;
+          const ema = _coactivationEma.get(key) || 0.0;
+          const error = Math.abs(product - ema);
+          _coactivationEma.set(key, NOVELTY_EMA_ALPHA * product + (1 - NOVELTY_EMA_ALPHA) * ema);
+          if (error <= NOVELTY_GATE_THRESHOLD) {
+            noveltySkipped++;
+            continue;
+          }
+        }
+        delta = LTP_DELTA;
+      }
       else if (ai > 0.2 && aj > 0.2) {
         if (v5DecayEnabled) continue;  // V5a Phase 6: LTD replaced by L2 bulk decay above
         delta = LTD_DELTA;
@@ -109,6 +143,22 @@ export async function runHebbWriteback() {
       else continue;
       pairDeltas.push([s.nodeRows[activeIdx[i]].id, s.nodeRows[activeIdx[j]].id, delta]);
     }
+  }
+
+  // Bound EMA dict (Python parity: 3000-entry cap, prune-then-keep-top-half).
+  if (_coactivationEma.size > EMA_MAX_SIZE) {
+    for (const [k, v] of _coactivationEma) {
+      if (v <= EMA_NOISE_FLOOR) _coactivationEma.delete(k);
+    }
+    if (_coactivationEma.size > EMA_MAX_SIZE) {
+      const sorted = [..._coactivationEma.entries()].sort((a, b) => b[1] - a[1]);
+      _coactivationEma.clear();
+      for (let i = 0; i < Math.floor(EMA_MAX_SIZE / 2); i++) {
+        _coactivationEma.set(sorted[i][0], sorted[i][1]);
+      }
+    }
+    _emaPrunes++;
+    console.log(`[mimir-js hebb] EMA pruned → ${_coactivationEma.size} entries`);
   }
   if (!pairDeltas.length) {
     if (decayed > 0) {
@@ -216,5 +266,8 @@ export function hebbStatus() {
     last_run: _lastRunTs ? new Date(_lastRunTs).toISOString() : null,
     last_result: _lastResult,
     last_error: _lastError,
+    novelty_gate_enabled: _noveltyGateEnabled,
+    coactivation_ema_size: _coactivationEma.size,
+    ema_prunes: _emaPrunes,
   };
 }

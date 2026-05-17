@@ -41,7 +41,8 @@ import { llmRerank } from './llm-retriever.js';
 import { startWatchdog, stopWatchdog, noteHeartbeat, watchdogStatus } from './watchdog.js';
 import { startHeartbeat, stopHeartbeat, heartbeatStatus } from './heartbeat.js';
 import { liveStatus } from './live-push.js';
-import { startHebbLoop, stopHebbLoop, runHebbWriteback, hebbStatus } from './hebb.js';
+import { startHebbLoop, stopHebbLoop, runHebbWriteback, hebbStatus, setNoveltyGateEnabled } from './hebb.js';
+import { startRuminationLoop, stopRuminationLoop, runRumination, ruminationStatus, noteExternalSignal as noteRumSignal, setRuminationEnabled } from './rumination.js';
 import { startEdgeDecayLoop, stopEdgeDecayLoop, runEdgeDecay, edgeDecayStatus } from './edge-decay.js';
 import { startWalCheckpointLoop, stopWalCheckpointLoop, runWalCheckpoint, walCheckpointStatus } from './wal-checkpoint.js';
 import { startHealthMonitor, stopHealthMonitor, runHealthCheck, healthStatus, configureHealthMonitor } from './health-monitor.js';
@@ -1042,6 +1043,12 @@ route('POST', '/signal', async (req, res) => {
         _pulseLogAvailable = true;
       } catch { _pulseLogAvailable = false; }
     }
+    // Record A_fast snapshot so predictive priming can learn signal→next-state
+    // transitions. Cheap O(N) snapshot; bounded by SIGNAL_HISTORY_SIZE=20.
+    if (injected) {
+      try { sa.recordSignal(); } catch {}
+      try { noteRumSignal(); } catch {}
+    }
     send(res, 200, ok({ kind, accepted: injected, target_id: targetId || null, injected_ids: injectedIds }));
   } catch { send(res, 200, ok()); }
 });
@@ -1225,18 +1232,56 @@ route('POST', '/inject', async (req, res) => {
 // across restart (parity with Python rule that LLM-call autonomy must be
 // re-enabled explicitly each boot).
 route('GET', '/config', async (req, res) => {
-  send(res, 200, { ok: true, ...getAutonomyState(), autonomy: getAutonomyState() });
+  send(res, 200, {
+    ok: true,
+    ...getAutonomyState(),
+    autonomy: getAutonomyState(),
+    rumination_enabled: ruminationStatus().enabled,
+    novelty_gate_enabled: hebbStatus().novelty_gate_enabled,
+    reverse_propagation_enabled: sa.isReversePropEnabled(),
+    priming_enabled: sa.isPrimingEnabled(),
+  });
 });
 route('POST', '/config', async (req, res) => {
   try {
     const body = await readJson(req);
+    // Mímir internal-mechanism toggles. Default-ON kill-switch convention —
+    // these aren't autonomy actions so they live outside autonomy.js. Flips
+    // take effect on the next tick; not persisted across restart (env var
+    // MIMIR_<NAME>=0 is the durable off-switch).
+    const extraChanged = [];
+    if ('rumination_enabled' in body) {
+      setRuminationEnabled(Boolean(body.rumination_enabled));
+      extraChanged.push(`rumination_enabled=${Boolean(body.rumination_enabled)}`);
+    }
+    if ('novelty_gate_enabled' in body) {
+      setNoveltyGateEnabled(Boolean(body.novelty_gate_enabled));
+      extraChanged.push(`novelty_gate_enabled=${Boolean(body.novelty_gate_enabled)}`);
+    }
+    if ('reverse_propagation_enabled' in body) {
+      sa.setReversePropEnabled(Boolean(body.reverse_propagation_enabled));
+      extraChanged.push(`reverse_propagation_enabled=${Boolean(body.reverse_propagation_enabled)}`);
+    }
+    if ('priming_enabled' in body) {
+      sa.setPrimingEnabled(Boolean(body.priming_enabled));
+      extraChanged.push(`priming_enabled=${Boolean(body.priming_enabled)}`);
+    }
     const out = applyConfigPatch(body);
     if (!out.ok) return send(res, 400, out);
     // Persist after every successful patch so a crash recovers the user's
     // opt-in state. clean_shutdown defaults to false here — only the
     // graceful shutdown handler writes the sentinel.
     try { saveAutonomyConfig(); } catch {}
-    send(res, 200, { ok: true, changed: out.changed, ...getAutonomyState() });
+    const changed = [...(out.changed || []), ...extraChanged];
+    send(res, 200, {
+      ok: true,
+      changed,
+      ...getAutonomyState(),
+      rumination_enabled: ruminationStatus().enabled,
+      novelty_gate_enabled: hebbStatus().novelty_gate_enabled,
+      reverse_propagation_enabled: sa.isReversePropEnabled(),
+      priming_enabled: sa.isPrimingEnabled(),
+    });
   } catch (e) { send(res, 500, { ok: false, error: e.message }); }
 });
 
@@ -1307,6 +1352,16 @@ route('POST', '/hebb/run', async (req, res) => {
     send(res, 200, out);
   } catch (e) { send(res, 500, { ok: false, error: e.message }); }
 });
+route('POST', '/rumination/run', async (req, res) => {
+  try {
+    const out = runRumination();
+    send(res, 200, { ok: true, ...out });
+  } catch (e) { send(res, 500, { ok: false, error: e.message }); }
+});
+route('GET', '/rumination/status', async (req, res) => {
+  send(res, 200, { ok: true, ...ruminationStatus() });
+});
+
 route('GET', '/hebb/status', async (req, res) => {
   send(res, 200, { ok: true, ...hebbStatus() });
 });
@@ -1564,6 +1619,7 @@ async function boot() {
   if (startDreamLoop()) console.log('[mimir-js] dream loop armed');
   if (startEvolutionLoop()) console.log('[mimir-js] edge-evolution loop armed');
   if (startHebbLoop()) console.log('[mimir-js] hebb writeback armed (180s cadence — BCM plasticity)');
+  if (startRuminationLoop()) console.log('[mimir-js] rumination armed (120s cadence — DMN re-activates recent zones when idle)');
   if (startEdgeDecayLoop()) console.log('[mimir-js] edge-decay armed (1h cadence — use it or lose it)');
   if (startWalCheckpointLoop()) console.log('[mimir-js] wal-checkpoint armed (10min cadence — keeps WAL bounded)');
   const convPath = resolve(dirname(DB_PATH), 'conversations.db');
