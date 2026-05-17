@@ -402,7 +402,7 @@ Grep `identity/tasks.json` first. Inventing a task ID to mark "completed" wastes
 `identity/tasks.json`, `identity/COGNITIVE_STATE.md`, `identity/inbox/` are owned by Anamnesis + pulse handlers. Direct edits race with their atomic-write paths. Use TASK_TOUCH / COGNITIVE_TOUCH / DEBRIEF.
 
 ### 10.8 Don't assume the closed-source main arch exists here
-OSS does not ship the Telegram bot, the upstream Python Mímir daemon, the closed dashboard B-tier, Ratatoskr anchor-sweep crons beyond memory-hygiene, or the Haiku reranker. See §11.
+OSS does not ship the upstream Python Mímir daemon, the closed dashboard B-tier, Ratatoskr anchor-sweep crons beyond memory-hygiene, or the Haiku reranker. The Telegram bot **is** shipped as the primary external interface (Stage 10 optional integration). See §11.
 
 ---
 
@@ -412,7 +412,6 @@ What OSS **excludes** vs. the closed-source main arch:
 
 | Excluded | Why | Workaround |
 |---|---|---|
-| Telegram bot | Closed integration; outbound only via stub in `src/telegram.js` (not wired) | Use the dashboard at `127.0.0.1:18800` |
 | Python Mímir daemon | OSS ships the JS port (`scripts/mimir-js/`); identical params | None needed — JS daemon is full-parity |
 | Multi-cron suite | Only memory-hygiene ships default-on | Configure additional crons via dashboard if desired |
 | Haiku reranker (advanced) | Cost / closed prompt | BGE-M3 cosine + pool rerank suffice for steady state |
@@ -420,6 +419,7 @@ What OSS **excludes** vs. the closed-source main arch:
 | Cloud sync / multi-device | Out of scope for v1 | All data local in `constellation.db` |
 
 What OSS **does** ship (all r25-equivalent):
+- **Telegram bot** (`src/telegram.js`, ~2820 lines) — primary external interface, Stage 10 optional integration with BotFather setup docs
 - Full 3-channel Multi-SA (`sa.js`)
 - 4 r25 mechanisms — Rumination, Novelty Gate, Predictive Priming, Reverse Propagation
 - Autonomy v3 picker (default-off, opt-in)
@@ -428,7 +428,7 @@ What OSS **does** ship (all r25-equivalent):
 - Identity bootstrap (`tasks.json` + `COGNITIVE_STATE.md` auto-create on first boot)
 - Local dashboard stub on port 18800 (status + onboarding)
 
-Don't tell users a feature is "missing in OSS" when it's actually present under a different filename — grep `scripts/mimir-js/` before claiming a gap.
+Don't tell users a feature is "missing in OSS" when it's actually present under a different filename — grep `scripts/mimir-js/` before claiming a gap. The Telegram bot is in particular **not** a gap: it is the headline external interface for OSS users.
 
 ---
 
