@@ -15,12 +15,29 @@ import { embed, EMBED_DIM, toBlob } from './embed.js';
 const KILL = String(process.env.MIMIR_RECONSOLIDATE || '').trim() === '0';
 
 const SIMILARITY_THRESHOLD = 0.55;
-const SUPERSEDE_THRESHOLD  = 0.85;
+// Raised 0.85→0.92 (2026-05-18): pure-cosine batch SUPERSEDE bypasses the LLM
+// judge's TIMELINE_MERGE detection. Bias toward false negatives — Chief's rule
+// "情愿放过supersede都不能错杀". 0.85-0.92 band still gets the `_updated_` marker
+// path, but a true verdict requires the full judge via Lever B re-sweep.
+const SUPERSEDE_THRESHOLD  = 0.92;
 const KNN_LIMIT            = 30;
 
 const IMMUTABLE_TYPES = new Set([
   'identity', 'principle', 'milestone', 'diary',
   'relationship', 'experiment',
+  // Added 2026-05-18 — mirror engine.cjs FUSION_THRESHOLD_BY_TYPE Infinity set
+  'profile-dim', 'reflection', 'tension-resolution',
+]);
+
+// Per-type allowed ops gate — mirrors engine.cjs ALLOWED_OPS_BY_TYPE. Types whose
+// allowed-ops list lacks 'SUPERSEDE' must never be superseded by this pure-cosine
+// path. Types not listed here fall through to IMMUTABLE_TYPES or are allowed.
+const SUPERSEDE_BLOCKED_TYPES = new Set([
+  'social-rule', 'language-template', 'general-knowledge',
+  'reading-note', 'introspection',
+  'action', 'interaction',
+  // identity/principle/milestone/diary/experiment/relationship/profile-dim/
+  // reflection/tension-resolution already covered by IMMUTABLE_TYPES.
 ]);
 
 function _isImmutable(nodeType, tags) {
@@ -32,6 +49,10 @@ function _isImmutable(nodeType, tags) {
     }
   }
   return false;
+}
+
+function _supersedeAllowed(nodeType) {
+  return !SUPERSEDE_BLOCKED_TYPES.has(String(nodeType || '').toLowerCase());
 }
 
 function _parseTags(raw) {
@@ -103,6 +124,11 @@ export async function reconsolidate({
 
       if (immutable) {
         result.protected.push({ node_id: c.node_id, similarity: sim });
+        continue;
+      }
+      if (sim >= SUPERSEDE_THRESHOLD && !_supersedeAllowed(c.node_type)) {
+        // Type's allowed-ops list excludes SUPERSEDE — protect even at near-1.0.
+        result.protected.push({ node_id: c.node_id, similarity: sim, reason: 'ops-blocked' });
         continue;
       }
       if (sim >= SUPERSEDE_THRESHOLD) {

@@ -63,7 +63,7 @@ const LLM_BASE_URL = process.env.CONSTELLATION_LLM_URL || 'http://127.0.0.1:3456
 const LLM_API_KEY = process.env.CONSTELLATION_LLM_KEY || 'constellation-local';
 const LLM_MODEL = process.env.CONSTELLATION_LLM_MODEL || '';
 const CONSOLIDATION_MODEL = process.env.CONSTELLATION_CONSOLIDATION_MODEL || '';
-const CONSOLIDATION_COSINE_THRESHOLD = 0.70;  // cosine sim above this → send to consolidation model (lowered from 0.80 — experiments showed real duplicates at 0.70-0.80)
+const CONSOLIDATION_COSINE_THRESHOLD = 0.65;  // cosine sim above this → send to consolidation model (lowered 0.70→0.65 2026-05-18 to catch real-duplicate band 0.65-0.70)
 const CONSOLIDATION_ENABLED = process.env.CONSTELLATION_CONSOLIDATION !== '0';
 
 // ── Timeline Merge (A4) — 4th consolidation verdict: same-topic arc merging ──
@@ -253,6 +253,18 @@ class ConstellationEngine {
         });
       }, 60_000);
       if (this._coldStartTimer.unref) this._coldStartTimer.unref();
+    }
+
+    // Lever B (2026-05-18) — periodic consolidation re-sweep.
+    // Fires every 6h, judges up to 30 pairs in the cosSim ∈ [type_threshold, 0.95)
+    // band that the write-time top-6 KNN missed or that drifted in after the
+    // threshold drop. Kill-switch: ENGINE_CONSOLIDATION_RESWEEP=0.
+    if (process.env.ENGINE_CONSOLIDATION_RESWEEP !== '0' && CONSOLIDATION_ENABLED) {
+      this._consolidationResweepTimer = setInterval(() => {
+        this._consolidationResweep({ windowDays: 30, maxPairs: 30 })
+          .catch(e => console.warn('[Resweep] tick err:', e.message));
+      }, 6 * 3600 * 1000);
+      if (this._consolidationResweepTimer.unref) this._consolidationResweepTimer.unref();
     }
   }
 
@@ -2814,6 +2826,166 @@ class ConstellationEngine {
     } catch (err) {
       console.warn(`[Consolidation] Error in check:`, err.message);
     }
+  }
+
+  /**
+   * Lever B (2026-05-18) — periodic consolidation re-sweep.
+   *
+   * Write-time KNN only inspects top-6 neighbors above the type threshold at the moment of
+   * insert. Pairs that drift into the band later (threshold drops, embedder improvements,
+   * legacy nodes from before the threshold change) never get judged. This method walks a
+   * sample of recent nodes, runs full top-6 KNN, and routes the cosSim ∈ [type_threshold, 0.95)
+   * band through the same LLM judge as the write path — including TIMELINE_MERGE detection
+   * that pure-cosine batch sweeps would miss.
+   *
+   * Throttled: max `maxPairs` judge calls per fire. Skips pairs judged within the last
+   * `dedupeDays` (cheap consolidation_log lookup). Kill-switch: ENGINE_CONSOLIDATION_RESWEEP=0.
+   */
+  async _consolidationResweep({ windowDays = 30, maxPairs = 30, dryRun = false, dedupeDays = 7, sampleSize = 120 } = {}) {
+    if (process.env.ENGINE_CONSOLIDATION_RESWEEP === '0') {
+      return { ok: false, killed: true, scanned: 0, judged: 0 };
+    }
+    const t0 = Date.now();
+    const cutoffSec = Math.floor((Date.now() - windowDays * 86400 * 1000) / 1000);
+    const dedupeCutoff = new Date(Date.now() - dedupeDays * 86400 * 1000).toISOString();
+
+    let candidateNodes = [];
+    try {
+      candidateNodes = this.db.prepare(`
+        SELECT id, l0, l1, l2, node_type, source, event_at, created_at
+          FROM nodes
+         WHERE state = 'active' AND superseded_at IS NULL
+           AND COALESCE(strftime('%s', event_at), strftime('%s', created_at), 0) >= ?
+         ORDER BY RANDOM()
+         LIMIT ?
+      `).all(cutoffSec, Math.max(10, Math.min(500, sampleSize | 0)));
+    } catch (e) {
+      return { ok: false, error: e.message, scanned: 0, judged: 0 };
+    }
+
+    let judged = 0, fused = 0, superseded = 0, merged = 0, indep = 0, blocked = 0;
+    const rowIdToNode = this.db.prepare("SELECT node_id FROM node_rowids WHERE rowid = ?");
+    const rowIdLookup = this.db.prepare("SELECT rowid FROM node_rowids WHERE node_id = ?");
+    const embLookup   = this.db.prepare("SELECT embedding FROM node_embeddings WHERE rowid = ?");
+    const nodeLookup  = this.db.prepare(`
+      SELECT id, l0, l1, l2, node_type, source, event_at, created_at, state, superseded_at
+        FROM nodes WHERE id = ? AND state = 'active' AND superseded_at IS NULL
+    `);
+    const recentJudgedLookup = this.db.prepare(`
+      SELECT 1 FROM consolidation_log
+       WHERE created_at > ?
+         AND ((new_node_id = ? AND old_node_id = ?) OR (new_node_id = ? AND old_node_id = ?))
+       LIMIT 1
+    `);
+
+    for (const a of candidateNodes) {
+      if (judged >= maxPairs) break;
+      const aThreshold = FUSION_THRESHOLD_BY_TYPE[a.node_type] ?? CONSOLIDATION_COSINE_THRESHOLD;
+      if (aThreshold === Infinity) continue;
+
+      const rowMap = rowIdLookup.get(a.id);
+      if (!rowMap) continue;
+      const embRow = embLookup.get(rowMap.rowid);
+      if (!embRow) continue;
+
+      let vecResults = [];
+      try {
+        vecResults = this.db.prepare(
+          `SELECT id, distance FROM node_embeddings WHERE embedding MATCH ? ORDER BY distance LIMIT 6`
+        ).all(embRow.embedding);
+      } catch { continue; }
+
+      for (const r of vecResults) {
+        if (judged >= maxPairs) break;
+        const mapping = rowIdToNode.get(r.id);
+        if (!mapping || mapping.node_id === a.id) continue;
+        const cosSim = 1 - (r.distance * r.distance) / 2;
+        if (cosSim < aThreshold) continue;
+        if (cosSim >= 0.95) continue;
+
+        const b = nodeLookup.get(mapping.node_id);
+        if (!b) continue;
+        const bThreshold = FUSION_THRESHOLD_BY_TYPE[b.node_type] ?? CONSOLIDATION_COSINE_THRESHOLD;
+        if (bThreshold === Infinity) continue;
+        if (cosSim < Math.max(aThreshold, bThreshold)) continue;
+
+        const supEdge = this.db.prepare(`
+          SELECT 1 FROM edges WHERE state = 'active' AND edge_type = 'supersedes'
+             AND ((source = ? AND target = ?) OR (source = ? AND target = ?))
+          LIMIT 1
+        `).get(a.id, b.id, b.id, a.id);
+        if (supEdge) continue;
+
+        if (recentJudgedLookup.get(dedupeCutoff, a.id, b.id, b.id, a.id)) continue;
+
+        const aTs = new Date(a.event_at || a.created_at).getTime();
+        const bTs = new Date(b.event_at || b.created_at).getTime();
+        const newer = aTs >= bTs ? a : b;
+        const older = aTs >= bTs ? b : a;
+
+        if (dryRun) { judged++; continue; }
+
+        let verdict;
+        try {
+          verdict = await this._callConsolidationJudge(
+            { id: newer.id, l0: newer.l0, l1: newer.l1, l2: newer.l2, created_at: newer.event_at || newer.created_at, node_type: newer.node_type },
+            { id: older.id, l0: older.l0, l1: older.l1, l2: older.l2, created_at: older.event_at || older.created_at, node_type: older.node_type },
+            cosSim
+          );
+        } catch (e) {
+          console.warn(`[Resweep] judge err: ${e.message}`);
+          continue;
+        }
+        judged++;
+        if (!verdict) continue;
+
+        // ALLOWED_OPS gate — mirrors write-time guard. Bias toward false negatives
+        // ("情愿放过supersede都不能错杀"): when in doubt, downgrade to INDEPENDENT.
+        const newAllowed = ALLOWED_OPS_BY_TYPE[newer.node_type];
+        const oldAllowed = ALLOWED_OPS_BY_TYPE[older.node_type];
+        if ((newAllowed && !newAllowed.includes(verdict.action)) ||
+            (oldAllowed && !oldAllowed.includes(verdict.action))) {
+          verdict.action = 'INDEPENDENT';
+          blocked++;
+        }
+
+        try {
+          if (verdict.action === 'FUSE') {
+            this._applyFuse(newer.id, older);
+            this._logConsolidation({ verdict: 'FUSE', newNodeId: newer.id, oldNodeId: older.id, newL0: newer.l0, oldL0: older.l0, cosine: cosSim, reason: `[resweep] ${verdict.reason}` });
+            fused++;
+          } else if (verdict.action === 'SUPERSEDE') {
+            this._applySupersede(newer.id, older.id);
+            this._logConsolidation({ verdict: 'SUPERSEDE', newNodeId: newer.id, oldNodeId: older.id, newL0: newer.l0, oldL0: older.l0, cosine: cosSim, reason: `[resweep] ${verdict.reason}` });
+            superseded++;
+          } else if (verdict.action === 'TIMELINE_MERGE') {
+            const olderTs = new Date(older.event_at || older.created_at).getTime();
+            const gapHours = Number.isFinite(olderTs) ? (Date.now() - olderTs) / 3.6e6 : Infinity;
+            if (TIMELINE_MERGE_ENABLED && gapHours >= TIMELINE_MERGE_MIN_GAP_HOURS) {
+              this._applyTimelineMerge(
+                { id: newer.id, l0: newer.l0, l1: newer.l1, l2: newer.l2, created_at: newer.created_at, event_at: newer.event_at },
+                { id: older.id, l0: older.l0, l1: older.l1, l2: older.l2, created_at: older.created_at, event_at: older.event_at },
+                verdict.newL0, verdict.newL1
+              );
+              this._logConsolidation({ verdict: 'TIMELINE_MERGE', newNodeId: newer.id, oldNodeId: older.id, newL0: newer.l0, oldL0: older.l0, cosine: cosSim, reason: `[resweep] ${verdict.reason}` });
+              merged++;
+            } else {
+              this._logConsolidation({ verdict: 'INDEPENDENT', newNodeId: newer.id, oldNodeId: older.id, newL0: newer.l0, oldL0: older.l0, cosine: cosSim, reason: `[resweep veto-tm] ${verdict.reason}` });
+              indep++;
+            }
+          } else {
+            this._logConsolidation({ verdict: 'INDEPENDENT', newNodeId: newer.id, oldNodeId: older.id, newL0: newer.l0, oldL0: older.l0, cosine: cosSim, reason: `[resweep] ${verdict.reason}` });
+            indep++;
+          }
+        } catch (applyErr) {
+          console.warn(`[Resweep] apply err (${verdict?.action}): ${applyErr.message}`);
+        }
+      }
+    }
+
+    const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+    console.log(`[Resweep] judged=${judged} fuse=${fused} supersede=${superseded} timeline=${merged} indep=${indep} blocked=${blocked} (${elapsed}s, window=${windowDays}d, max=${maxPairs}, sampled=${candidateNodes.length})`);
+    return { ok: true, scanned: candidateNodes.length, judged, fuse: fused, supersede: superseded, timeline_merge: merged, independent: indep, blocked, elapsed_s: Number(elapsed) };
   }
 
   /**
