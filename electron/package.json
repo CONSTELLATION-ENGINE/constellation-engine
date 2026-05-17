@@ -120,7 +120,7 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "devinrory-collab",
+        "owner": "CONSTELLATION-ENGINE",
         "repo": "constellation-engine",
         "releaseType": "release"
       }
