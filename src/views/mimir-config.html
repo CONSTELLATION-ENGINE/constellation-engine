@@ -1107,7 +1107,7 @@ function renderLicense(d){
       banner.style.display = '';
       banner.classList.add('trial');
       el('lic-title').textContent = 'TRIAL — ' + Math.ceil(d.trialDaysLeft) + ' days left';
-      el('lic-body').textContent = 'Mímir Autonomy is unlocked during your 30-day trial. After that, this tab becomes read-only unless you subscribe ($4.99/mo). Engine and basic Dashboard remain free.';
+      el('lic-body').textContent = 'Mímir Autonomy is unlocked during your 30-day trial. After that, this tab becomes read-only unless you subscribe ($5/mo). Engine and basic Dashboard remain free.';
       el('lic-cta').textContent = 'Subscribe later';
     } else if (d.source === 'community-beta'){
       banner.style.display = '';
@@ -1128,7 +1128,7 @@ function renderLicense(d){
       ? 'Your 30-day Mímir Autonomy trial has ended.'
       : 'Mímir Autonomy is locked.';
     el('lic-body').textContent = reason + ' Switches and sliders are disabled but your current settings remain visible. Engine and basic Dashboard stay free forever — only autonomous behaviors stop.';
-    el('lic-cta').textContent = 'Subscribe $4.99/mo';
+    el('lic-cta').textContent = 'Subscribe $5/mo';
     el('lic-cta').style.display = '';
   }
 }

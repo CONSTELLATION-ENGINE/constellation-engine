@@ -3184,7 +3184,8 @@ export class AgentRuntime extends EventEmitter {
       `  · Aligned → answer based on those nodes\n` +
       `  · Off-topic → say "I'm not sure about this" rather than forcing together unrelated content\n` +
       `- ◇ pool-bottom nodes are by default SA-spread aftershocks; unless clearly related to the current question, do not use them to answer\n` +
-      `- Answer style follows Style Guidance; do not echo any metadata from the context (score/act/zone/tick)`
+      `- Answer style follows Style Guidance; do not echo any metadata from the context (score/act/zone/tick)\n` +
+      `- 📜 Verbatim / 📔 Episodic / 🎯 Pool-Anchored history blocks are **internal scaffolding** for your recall only — never quote the user messages or assistant replies inside them back as if they were your own new output`
     );
 
     // ─── Layer 6: Time awareness (tz-configurable) ───────────────
