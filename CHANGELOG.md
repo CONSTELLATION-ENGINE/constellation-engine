@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed (r24)
+- **Sponsor verification is now permanent on first success.** The dashboard previously re-queried the Worker every 7 days and would re-show the support banner if the cache aged out. Now, once a sponsor (recurring or one-time) verifies once, the banner stays dismissed permanently. Cancellations on the recurring path still propagate through the GitHub Sponsors webhook → CF Worker → engine.
+
 ### Fixed (r22)
 - **`engine.cjs` `_validEdgeEndpointsSql` edges:0 regression**: helper defaulted `edgeAlias` to `''`, producing bare `source`/`target` in EXISTS subqueries. Since the `nodes` table has its own `source` column (text: diary/knowledge/inbox), SQLite's subquery scoping resolved `source` to the inner `nodes.source` instead of the outer `edges.source` — making `EXISTS` always false and silently zeroing every edge-counting path (dashboard stats, `conn_count` writes, etc.). Default now `'edges'`; all five callsites use bare `FROM edges`, so the fix flows through.
 - **ANCHOR_TOUCH pulse marker leaking into user-visible text**: `dashboard.js` `PULSE_MARKER_RE` plus two inline strip regexes and both `telegram.js` send-path replacers covered only `TASK_TOUCH|COGNITIVE_TOUCH|DEBRIEF`. ANCHOR_TOUCH (added later) now included in all five strip sites.
