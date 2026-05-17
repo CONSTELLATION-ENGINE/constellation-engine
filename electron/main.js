@@ -240,7 +240,6 @@ function spawnMimir() {
     cwd: ENGINE_DIR,
     silent: true,
     env: {
-      LICENSE_MODE: 'community',
       ...process.env,
       MIMIR_PORT: String(MIMIR_BASE_PORT),
       MIMIR_PORT_RANGE: String(MIMIR_PORT_RANGE),
@@ -488,11 +487,6 @@ async function spawnEngine(port) {
     cwd: ENGINE_DIR,
     silent: true,
     env: {
-      // LICENSE_MODE: default to community-beta unlock for OSS testers so V5
-      // autonomy stays usable end-to-end during beta. Real env override wins
-      // (mergedEnv spreads after this), letting closed-source distros set
-      // LICENSE_MODE=oss-stub or anything else to re-engage gating.
-      LICENSE_MODE: 'community',
       ...mergedEnv,
       CONSTELLATION_PORT: String(port),
       MIMIR_URL: mimirUrl,

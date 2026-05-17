@@ -58,7 +58,6 @@ const WHITELIST_EXACT = new Set([
   '/api/status',
   '/api/healthz',
   '/api/health/summary',
-  '/api/license/status',
   '/favicon.ico',
   '/robots.txt',
 ]);

@@ -194,29 +194,6 @@
     border-top:1px dashed rgba(255,208,128,0.18);color:var(--text3);font-size:11.5px;
     font-style:italic}
 
-  /* License read-only lockout */
-  .lic-banner{display:none;margin:8px 0 14px;padding:14px 18px;
-    background:linear-gradient(180deg,rgba(106,63,160,0.10) 0%,rgba(106,63,160,0.04) 100%);
-    border:1px solid rgba(106,63,160,0.45);border-left:3px solid #8b5fbf;
-    border-radius:4px;color:var(--text);font-size:12.5px;line-height:1.6}
-  .lic-banner .lic-title{display:block;font-weight:600;color:#c8a3ff;
-    letter-spacing:.05em;text-transform:uppercase;font-size:10.5px;margin-bottom:6px}
-  .lic-banner .lic-cta{display:inline-block;margin-top:8px;padding:6px 14px;
-    background:#6a3fa0;color:#fff;border-radius:3px;text-decoration:none;font-weight:600;
-    font-size:12px;border:0;cursor:pointer}
-  .lic-banner .lic-cta:hover{background:#7a4fb0}
-  .lic-banner.trial{border-color:rgba(255,208,128,0.30);border-left-color:var(--gold);
-    background:linear-gradient(180deg,rgba(255,208,128,0.06) 0%,rgba(255,208,128,0.02) 100%)}
-  .lic-banner.trial .lic-title{color:var(--gold)}
-  body.license-locked .panel:not(.observation):not(.danger) input,
-  body.license-locked .panel:not(.observation):not(.danger) select,
-  body.license-locked .panel:not(.observation):not(.danger) textarea,
-  body.license-locked .panel:not(.observation):not(.danger) button{
-    opacity:0.5;cursor:not-allowed;pointer-events:none}
-  body.license-locked .panel:not(.observation):not(.danger) .toggle{
-    opacity:0.5;cursor:not-allowed;pointer-events:none}
-  body.license-locked .panel:not(.observation):not(.danger){
-    position:relative;border-color:rgba(106,63,160,0.25)}
 </style>
 </head>
 <body>
@@ -233,12 +210,6 @@
 
 <div id="daemon-down" class="alert danger" style="display:none">
   <strong>Mímir daemon unreachable.</strong> The daemon may not be running. Live status and edits are disabled until it returns.
-</div>
-
-<div id="lic-banner" class="lic-banner">
-  <span class="lic-title" id="lic-title">—</span>
-  <span id="lic-body">—</span>
-  <div><button class="lic-cta" id="lic-cta" type="button">Subscribe</button></div>
 </div>
 
 <div id="idle-warn" class="alert warn" style="display:none">
@@ -1089,62 +1060,6 @@ async function pollColdStart(){
 }
 
 // ─────────────────────────────────────────────
-// License read-only lockout
-// ─────────────────────────────────────────────
-const LICENSE_POLL_MS = 30000;
-let licensePollTimer = null;
-
-function renderLicense(d){
-  const banner = el('lic-banner');
-  if (!d || d.ok === false){
-    banner.style.display = 'none';
-    document.body.classList.remove('license-locked');
-    return;
-  }
-  if (d.effectiveUnlocked){
-    document.body.classList.remove('license-locked');
-    if (d.source === 'trial' && d.trialDaysLeft != null){
-      banner.style.display = '';
-      banner.classList.add('trial');
-      el('lic-title').textContent = 'TRIAL — ' + Math.ceil(d.trialDaysLeft) + ' days left';
-      el('lic-body').textContent = 'Mímir Autonomy is unlocked during your 30-day trial. After that, this tab becomes read-only unless you subscribe ($5/mo). Engine and basic Dashboard remain free.';
-      el('lic-cta').textContent = 'Subscribe later';
-    } else if (d.source === 'community-beta'){
-      banner.style.display = '';
-      banner.classList.remove('trial');
-      el('lic-title').textContent = 'COMMUNITY BETA';
-      el('lic-body').textContent = 'LICENSE_MODE=community is set — Mímir Autonomy is fully unlocked for beta testing. Real subscription enforcement is deferred until license-server ships.';
-      el('lic-cta').style.display = 'none';
-    } else {
-      banner.style.display = 'none';
-      banner.classList.remove('trial');
-    }
-  } else {
-    document.body.classList.add('license-locked');
-    banner.style.display = '';
-    banner.classList.remove('trial');
-    el('lic-title').textContent = 'AUTONOMY READ-ONLY';
-    const reason = d.reason === 'trial_expired'
-      ? 'Your 30-day Mímir Autonomy trial has ended.'
-      : 'Mímir Autonomy is locked.';
-    el('lic-body').textContent = reason + ' Switches and sliders are disabled but your current settings remain visible. Engine and basic Dashboard stay free forever — only autonomous behaviors stop.';
-    el('lic-cta').textContent = 'Subscribe $5/mo';
-    el('lic-cta').style.display = '';
-  }
-}
-
-async function pollLicense(){
-  try {
-    const r = await fetch('/api/license/state');
-    if (!r.ok){ renderLicense({ ok: false }); return; }
-    const d = await r.json();
-    renderLicense(d);
-  } catch {
-    renderLicense({ ok: false });
-  }
-}
-
-// ─────────────────────────────────────────────
 // Load / post
 // ─────────────────────────────────────────────
 async function loadConfig(){
@@ -1471,52 +1386,13 @@ function wireButtons(){
   });
 }
 
-// ─────────────────────────────────────────────
-// Visibility-Permission Gating (W8) — Lite users
-// see UI but commits go to subscribe modal in parent.
-// ─────────────────────────────────────────────
-window.__ceLicense = { active: false, loaded: false };
-fetch('/api/license/status').then(r => r.ok ? r.json() : null).then(j => {
-  if (j && typeof j.active === 'boolean') window.__ceLicense = Object.assign({ loaded: true }, j);
-  else window.__ceLicense.loaded = true;
-}).catch(() => { window.__ceLicense.loaded = true; });
-
-function _isInteractiveTarget(el){
-  if (!el) return false;
-  if (el.tagName === 'BUTTON') return true;
-  if (el.classList && el.classList.contains('toggle')) return true;
-  if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT') return true;
-  return false;
-}
-function _findInteractive(el){
-  while (el && el !== document.body){
-    if (_isInteractiveTarget(el)) return el;
-    el = el.parentElement;
-  }
-  return null;
-}
-function _gateIntercept(e){
-  if (window.__ceLicense && window.__ceLicense.active) return;
+// Dirty-tracking: mark inputs as dirty so renderTunables doesn't clobber
+// unsaved typing during periodic re-renders.
+document.addEventListener('input', function(e){
   var t = e.target;
-  if (t && t.classList && t.classList.contains('tt-trigger')) return;
-  if (t && t.tagName === 'A') return;
-  var el = _findInteractive(t);
-  if (!el) return;
-  if (e.type === 'keydown' && e.key !== 'Enter') return;
-  if (e.type === 'input' || e.type === 'change'){
-    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.dataset.dirty = '1';
-  }
-  if (e.type === 'input') return;
-  e.stopImmediatePropagation();
-  e.preventDefault();
-  try {
-    parent.postMessage({ type: 'constellation:subscribe-gate', feature: 'mimir.advanced' }, location.origin);
-  } catch {}
-}
-document.addEventListener('click', _gateIntercept, true);
-document.addEventListener('change', _gateIntercept, true);
-document.addEventListener('input', _gateIntercept, true);
-document.addEventListener('keydown', _gateIntercept, true);
+  if (!t) return;
+  if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') t.dataset.dirty = '1';
+}, true);
 
 // Skip-on-dirty: don't clobber unsaved typing
 const _origRenderTunables = renderTunables;
@@ -1541,23 +1417,18 @@ wireTooltips();
 _wirePoolSliders();
 loadConfig();
 pollColdStart();
-pollLicense();
 pollTimer = setInterval(loadConfig, POLL_MS);
 coldStartPollTimer = setInterval(pollColdStart, COLD_START_POLL_MS);
-licensePollTimer = setInterval(pollLicense, LICENSE_POLL_MS);
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden){
     if (pollTimer){ clearInterval(pollTimer); pollTimer = null; }
     if (coldStartPollTimer){ clearInterval(coldStartPollTimer); coldStartPollTimer = null; }
-    if (licensePollTimer){ clearInterval(licensePollTimer); licensePollTimer = null; }
   } else {
     loadConfig();
     pollColdStart();
-    pollLicense();
     if (!pollTimer) pollTimer = setInterval(loadConfig, POLL_MS);
     if (!coldStartPollTimer) coldStartPollTimer = setInterval(pollColdStart, COLD_START_POLL_MS);
-    if (!licensePollTimer) licensePollTimer = setInterval(pollLicense, LICENSE_POLL_MS);
   }
 });
 </script>

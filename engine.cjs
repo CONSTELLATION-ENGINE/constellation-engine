@@ -1229,42 +1229,6 @@ class ConstellationEngine {
   }
 
   /**
-   * License entitlement state. Three sources, in priority order:
-   *   1. LICENSE_MODE=community env → unlimited beta unlock
-   *   2. Inside the 30d cold-start window → fail-OPEN (H2 — license-server
-   *      flake or offline boot must not lock a paying user out)
-   *   3. Otherwise → OSS stub returns locked (real license-server work follows)
-   * Used by both the picker gate (defense-in-depth, applied here in engine.cjs
-   * since mimir-js v1 hardcodes autonomy OFF) and the dashboard read-only
-   * lockout UI.
-   */
-  _licenseState() {
-    const now = Date.now();
-    const enabledAt = this._readEngineMetaEpochMs('autonomy_enabled_at');
-    const trialEndsAt = enabledAt ? enabledAt + 30 * 86_400_000 : null;
-    const withinTrialWindow = !!(trialEndsAt && now < trialEndsAt);
-
-    if (process.env.LICENSE_MODE === 'community') {
-      return {
-        unlocked: true, source: 'community-beta', reason: 'LICENSE_MODE=community',
-        trialEndsAt, withinTrialWindow, killSwitch: false,
-      };
-    }
-    if (withinTrialWindow) {
-      return {
-        unlocked: true, source: 'trial', reason: 'within_30d_cold_start_window',
-        trialEndsAt, withinTrialWindow: true, killSwitch: false,
-      };
-    }
-    // OSS v1 stub: no real signature validation. Closed-source distros override.
-    return {
-      unlocked: false, source: 'oss-stub',
-      reason: enabledAt ? 'trial_expired' : 'autonomy_not_enabled',
-      trialEndsAt, withinTrialWindow: false, killSwitch: false,
-    };
-  }
-
-  /**
    * Dispatcher tick. Runs every 60s. H1: single shared cycle that reads gate
    * once and routes. The bootstrap and steady-state branches are mutually
    * exclusive within a tick — they never fire together.
@@ -1275,21 +1239,6 @@ class ConstellationEngine {
     this._coldStart.tickCount += 1;
     this._coldStart.lastTickAt = Date.now();
     try {
-      // B3 picker gate (defense-in-depth). Even if the dashboard UI is
-      // tampered, the engine itself refuses to spend tokens or send outreach
-      // without entitlement. Fail-OPEN inside the 30d trial — see H2.
-      const lic = this._licenseState();
-      this._coldStart.lastLicenseState = lic;
-      if (!lic.unlocked) {
-        // Cheap log: only on transition into locked state to avoid pulse_hint_log spam.
-        if (this._coldStart.lastPhase !== 'license_locked') {
-          this._writePulseHint('cold_start_license_locked', {
-            reason: lic.reason, source: lic.source, trialEndsAt: lic.trialEndsAt,
-          });
-          this._coldStart.lastPhase = 'license_locked';
-        }
-        return;
-      }
       // Defensive: hydrate seeds blob from wizard node on first tick where
       // autonomy is enabled but engine_meta blob is missing (e.g. wizard ran
       // before Phase 9.5 was deployed and the blob never got written).
