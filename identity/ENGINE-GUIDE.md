@@ -79,7 +79,7 @@ A **node** is an atom of memory. Three content layers (`engine.cjs` schema):
 Other key fields:
 
 - `node_type` — governs decay rate and immutability (see §8).
-- `tags` — JSON array, lowercase hyphen-separated, domain-prefixed when useful (`kc:currency`, `eng:consolidation`).
+- `tags` — JSON array, lowercase hyphen-separated, domain-prefixed when useful (`domain:finance`, `eng:consolidation`).
 - `weight` — base importance, multiplied into activation score. Defaults to `1.0`; nodes with `weight > 2.0` are protected from consolidation.
 - `accessed_at`, `created_at` — drive recency scoring and decay calculations.
 - `state` — `active` / `dormant` / superseded (via `superseded_at`).
@@ -112,7 +112,7 @@ An **edge** is a typed, directed-ish connection (writes are mirrored both ways w
 
 **`supersedes` has a guard rail** (`engine.cjs:3458-3462`): if Mímir tries to mark a user-authored node superseded, the edge is downgraded to `contradicts` so user voice is never silently overwritten.
 
-The internal consolidation cron uses a larger 24-type whitelist (`CONSOLIDATION_EDGE_WHITELIST` at `engine.cjs:84-98`) for richer Sonnet-judged relations during overnight memory-hygiene. **You do not write those.** Stick to the 11 above.
+The internal consolidation cron uses a larger 24-type whitelist (`CONSOLIDATION_EDGE_WHITELIST` at `engine.cjs:84-98`) for richer judge-tier-LLM-evaluated relations during overnight memory-hygiene. **You do not write those.** Stick to the 11 above.
 
 ### 3.3 The three channels (Multi-SA)
 
@@ -232,7 +232,7 @@ Pulse hints are end-of-turn markers you embed in your response. They are strippe
 Flow (`src/session-debrief.js`):
 1. Hint stripped from outbound response.
 2. Session-debrief module collects pending behaviors. Cumulative significance score ≥ 3.0 (or any single ≥ 10) triggers a fire.
-3. A compact-tier LLM (`compactModel`, default Haiku-class) reviews the recent window (±5 messages, ≤ 8 KB) plus current `COGNITIVE_STATE.md` + `tasks.json`.
+3. A compact-tier LLM (`compactModel`) reviews the recent window (±5 messages, ≤ 8 KB) plus current `COGNITIVE_STATE.md` + `tasks.json`.
 4. Output is a structured delta: `tasks_completed / updated / new`, `cognitive_state_patches`, `star_map_worthy`, `inbox_decisions`.
 5. High-confidence captures become star-map nodes; low-confidence go to `identity/inbox/`.
 
@@ -402,7 +402,7 @@ Grep `identity/tasks.json` first. Inventing a task ID to mark "completed" wastes
 `identity/tasks.json`, `identity/COGNITIVE_STATE.md`, `identity/inbox/` are owned by Anamnesis + pulse handlers. Direct edits race with their atomic-write paths. Use TASK_TOUCH / COGNITIVE_TOUCH / DEBRIEF.
 
 ### 10.8 Don't assume the closed-source main arch exists here
-OSS does not ship the upstream Python Mímir daemon, the closed dashboard B-tier, Ratatoskr anchor-sweep crons beyond memory-hygiene, or the Haiku reranker. The Telegram bot **is** shipped as the primary external interface (Stage 10 optional integration). See §11.
+OSS does not ship the upstream Python Mímir daemon, the closed dashboard B-tier, Ratatoskr anchor-sweep crons beyond memory-hygiene, or the compact-tier reranker. The Telegram bot **is** shipped as the primary external interface (Stage 10 optional integration). See §11.
 
 ---
 
@@ -414,7 +414,7 @@ What OSS **excludes** vs. the closed-source main arch:
 |---|---|---|
 | Python Mímir daemon | OSS ships the JS port (`scripts/mimir-js/`); identical params | None needed — JS daemon is full-parity |
 | Multi-cron suite | Only memory-hygiene ships default-on | Configure additional crons via dashboard if desired |
-| Haiku reranker (advanced) | Cost / closed prompt | BGE-M3 cosine + pool rerank suffice for steady state |
+| Compact-tier reranker (advanced) | Cost / closed prompt | BGE-M3 cosine + pool rerank suffice for steady state |
 | Closed B-tier dashboard | Private repo | OSS dashboard is a stub at `src/dashboard.js` (status + engine-ready endpoints only) |
 | Cloud sync / multi-device | Out of scope for v1 | All data local in `constellation.db` |
 
