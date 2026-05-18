@@ -3204,7 +3204,9 @@ export class AgentRuntime extends EventEmitter {
       `  · Off-topic → say "I'm not sure about this" rather than forcing together unrelated content\n` +
       `- ◇ pool-bottom nodes are by default SA-spread aftershocks; unless clearly related to the current question, do not use them to answer\n` +
       `- Answer style follows Style Guidance; do not echo any metadata from the context (score/act/zone/tick)\n` +
-      `- 📜 Verbatim / 📔 Episodic / 🎯 Pool-Anchored history blocks are **internal scaffolding** for your recall only — never quote the user messages or assistant replies inside them back as if they were your own new output`
+      `- 📜 Verbatim / 📔 Episodic / 🎯 Pool-Anchored history blocks are **internal scaffolding** for your recall only — never quote the user messages or assistant replies inside them back as if they were your own new output\n` +
+      `- **Deep-retrieval trigger**: when the pool didn't cover what the user asked and they're asking about prior work / decisions / project state / "do you remember X" — first call \`graph_lookup(query, k=15)\` (~19s); if still empty, \`memory_search\`; only then say "I'm not sure". Hard cap of 3 retrieval rounds per turn — don't spiral. Casual chitchat with no recall need: skip retrieval and acknowledge the gap\n` +
+      `- **Anti-fabrication hard rule**: any concrete claim (numbers / file paths / function names / decisions / dates / parameters) must be grounded in pool / anchors / conversation history / tool output. "I remember" / "it should be" / "probably" is not evidence. No grounding → say "I'm not sure" or open a tool to verify — fabricated detail looks confident but gets caught`
     );
 
     // ─── Layer 6: Time awareness (tz-configurable) ───────────────
