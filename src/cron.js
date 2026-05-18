@@ -1054,7 +1054,7 @@ export class CronScheduler extends EventEmitter {
       // Delivery
       if (task.mode === 'agentTurn' && task.delivery !== false && verdict.response && this.bot) {
         try {
-          await this.bot.sendLong(this.bot.founderId, `🕐 **${task.name}**\n\n${verdict.response}`);
+          await this.bot.sendLong(this.bot.founderId, `🕐 **${task.name}**\n\n${verdict.response}`, { style: 'single' });
         } catch (e) {
           this.emit('warning', { task: task.name, message: `Delivery failed: ${e.message}` });
         }

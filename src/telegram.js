@@ -2180,7 +2180,7 @@ export class TelegramBot extends EventEmitter {
       ? splitMessage(text, this.#config.maxMessageLength)
       : formatResponseChunks(text, {
           maxLen: this.#config.maxMessageLength,
-          style: this.#config.responseStyle,
+          style: options.style || this.#config.responseStyle,
           targetLen: this.#config.layeredChunkTarget,
         });
 
@@ -2228,10 +2228,11 @@ export class TelegramBot extends EventEmitter {
    * @param {string|number} chatIdOrText - Chat ID (ignored, kept for backward compat) or text
    * @param {string} [text] - Message text (if first arg is chatId)
    */
-  async sendLong(chatIdOrText, text) {
+  async sendLong(chatIdOrText, text, options = {}) {
     // Support both sendLong(text) and sendLong(chatId, text) calling conventions
-    const msg = text !== undefined ? text : chatIdOrText;
-    await this.send(String(msg));
+    const msg = typeof text === 'string' ? text : chatIdOrText;
+    const opts = (typeof text === 'string' ? options : (text && typeof text === 'object' ? text : {})) || {};
+    await this.send(String(msg), opts);
   }
 
   /**
