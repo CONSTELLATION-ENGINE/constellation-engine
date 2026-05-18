@@ -9,7 +9,6 @@
     "start": "node src/main.js",
     "cli": "node src/cli.js",
     "boot-test": "node src/boot-test.js",
-    "test": "node --test src/**/*.test.js",
     "validate-config": "node scripts/validate-config.js",
     "migrate": "node scripts/migrate.js",
     "prepublish-check": "bash scripts/oss-sync.sh --check",

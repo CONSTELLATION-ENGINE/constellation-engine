@@ -46,6 +46,7 @@
         "to": "engine",
         "filter": [
           "src/**/*",
+          "!src/**/*.test.js",
           "scripts/**/*",
           "scripts/migrations/**/*",
           "engine.cjs",

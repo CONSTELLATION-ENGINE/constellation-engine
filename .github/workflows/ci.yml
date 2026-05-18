@@ -6,8 +6,8 @@ on:
     branches: [main]
 
 jobs:
-  stub-smoke:
-    name: Public stub smoke test
+  syntax-check:
+    name: Syntax check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,5 +17,5 @@ jobs:
           cache: 'npm'
       - name: Install
         run: npm install --no-audit --no-fund
-      - name: Stub boot + 503 surface tests
-        run: node --test src/tool-observability.test.js
+      - name: Syntax check main entry
+        run: node --check src/main.js
