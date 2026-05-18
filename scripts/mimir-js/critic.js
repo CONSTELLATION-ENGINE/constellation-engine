@@ -13,7 +13,7 @@
 // Stage 1 drops short-circuit to `decision='reject'` with `reason` set.
 //
 // Stage 2 — Critic LLM (configurable tier). Default 'hybrid' starts on the
-// fast tier (Haiku-class) and escalates to balanced (Sonnet-class) only on
+// fast tier and escalates to the balanced tier only on
 // `uncertain` axis. JSON-mode prompting + retry-once on parse failure.
 // Inbound message text (parent_ref body) is NEVER placed in the prompt —
 // prompt-injection mitigation per main arch Plan §3.4.
@@ -229,7 +229,7 @@ export function isDirectSendEnabled(db, { ownerId, personaId, platform, action }
 }
 
 // ──────────────────────────────────────────────────────────────────────
-//  Stage 2 — Critic LLM (Haiku → Sonnet hybrid escalation)
+//  Stage 2 — Critic LLM (fast → balanced hybrid escalation)
 // ──────────────────────────────────────────────────────────────────────
 
 const PLATFORM_BRIEF = {

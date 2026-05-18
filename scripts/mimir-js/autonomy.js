@@ -1616,10 +1616,10 @@ async function _curiosityTick() {
 }
 
 // Pre-picker decision layer (2026-05-11 Hybrid A+C refactor).
-// POSTs to engine /api/mimir/picker which issues a forced Anthropic
+// POSTs to engine /api/mimir/picker which issues a forced provider
 // tool_choice: {type:"tool", name:"select_action"} call — guarantees
-// structured output across all tiers (Sonnet bypasses prompt-trust JSON
-// envelope; tool_choice is API-level enforcement).
+// structured output across all tiers (balanced tier bypasses prompt-trust
+// JSON envelope; tool_choice is API-level enforcement).
 //
 // Returns parsed dict { action, candidate_id, rationale, payload,
 // chain_after, source } on success, or null on timeout / endpoint error /

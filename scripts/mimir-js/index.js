@@ -142,7 +142,7 @@ function _extractFirstJsonObj(s) {
 }
 
 // Walk all balanced top-level JSON dicts in `text` and return the picker
-// envelope. Sonnet-class pickers sometimes emit unrelated JSON blobs (DEBRIEF
+// envelope. Balanced-tier pickers sometimes emit unrelated JSON blobs (DEBRIEF
 // metadata, TASK_TOUCH receipts) that pre-empt the picker envelope under the
 // first-balanced-dict rule. Prefer dicts with BOTH action AND candidate_id
 // (canonical picker contract); fall back to action-only if no full envelope

@@ -77,7 +77,7 @@ const TIMELINE_MERGE_MAX_SECTIONS = Number.isFinite(_tmCfg.maxSections) ? _tmCfg
 const TIMELINE_MERGE_MAX_CHARS = Number.isFinite(_tmCfg.maxChars) ? _tmCfg.maxChars : 12000;
 const TIMELINE_MERGE_MIN_GAP_HOURS = Number.isFinite(_tmCfg.minGapHours) ? _tmCfg.minGapHours : 2;
 
-// Multi-SA edge whitelist — used by _callConsolidationJudge to validate Sonnet's EDGE_TYPE output.
+// Multi-SA edge whitelist — used by _callConsolidationJudge to validate the judge LLM's EDGE_TYPE output.
 // Source of truth: engine-output/architecture-research/PLAN-MULTI-SA-REACTIVATION.md §4.1
 // 23 types across 3 channels. Hallucinated types are dropped + logged; optional fallback to
 // FALLBACK_COARSE (5 coarse types) keeps the connection signal recoverable.
@@ -233,7 +233,7 @@ class ConstellationEngine {
       messagesCountCache: { value: null, ts: 0, ttlMs: 60_000 },
       messagesCountResolver: null,      // installed by main.js: () => convStore.db.prepare(...).get().c
       mimirActionsResolver: null,       // installed by main.js: ({sinceMs, limit}) => rows
-      llmExpansionInflight: false,      // Q5/H3: only one Sonnet expansion job at a time
+      llmExpansionInflight: false,      // Q5/H3: only one LLM expansion job at a time
     };
     this._init();
     // Verify daemon embed endpoint is reachable (non-blocking)
@@ -690,7 +690,7 @@ class ConstellationEngine {
     //
     // Three tables:
     //   1. exploration_trail   — raw grep/read/web/autonomy events (TTL 7d)
-    //   2. experiential_pending_review — Sonnet-aggregated proposals waiting decision (cap 200 FIFO)
+    //   2. experiential_pending_review — LLM-aggregated proposals waiting decision (cap 200 FIFO)
     //   3. sleipnir_metrics    — hourly tallies for dashboard panel
     // Plus: nodes.subtype column for exploration_anchor classification
     //       (factual / navigational / conceptual) and task_trail subtype.
@@ -701,7 +701,7 @@ class ConstellationEngine {
       console.log("[sleipnir] added nodes.subtype column");
     } catch (e) { /* already exists — idempotent */ }
 
-    // 2. exploration_trail — raw events before Sonnet aggregation
+    // 2. exploration_trail — raw events before LLM aggregation
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS exploration_trail (
         id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -723,7 +723,7 @@ class ConstellationEngine {
     this.db.exec("CREATE INDEX IF NOT EXISTS idx_extrl_region ON exploration_trail(region)");
     this.db.exec("CREATE INDEX IF NOT EXISTS idx_extrl_occurred ON exploration_trail(occurred_at)");
     this.db.exec("CREATE INDEX IF NOT EXISTS idx_extrl_promoted ON exploration_trail(promoted, occurred_at) WHERE promoted = 1");
-    // Aggregator cursor — set when Sonnet has consumed a row into a candidate.
+    // Aggregator cursor — set when the LLM has consumed a row into a candidate.
     try { this.db.exec("ALTER TABLE exploration_trail ADD COLUMN processed_at INTEGER"); } catch { /* idempotent */ }
     this.db.exec("CREATE INDEX IF NOT EXISTS idx_extrl_unprocessed ON exploration_trail(promoted, processed_at) WHERE promoted = 1 AND processed_at IS NULL");
     // Step 6 Plan A (2026-04-29) — raw text capture for hybrid storage. Caller
@@ -1292,7 +1292,7 @@ class ConstellationEngine {
 
   /**
    * Bootstrap branch — Phase 9.5 ships the skeleton; 9.6 plugs in fetch and
-   * 9.7 plugs in outreach. Each tick: ensure seeds exist, kick async Sonnet
+   * 9.7 plugs in outreach. Each tick: ensure seeds exist, kick async LLM
    * expansion if needed, run one fetch step, then check outreach gate.
    */
   async _coldStartBootstrapTick(gate) {
@@ -1459,7 +1459,7 @@ class ConstellationEngine {
 
   /**
    * Phase 9.6 — single fetch step. Picks one un-exhausted seed, drift-checks
-   * against existing pool, asks Sonnet for an L0/L1/L2 envelope, writes it
+   * against existing pool, asks the LLM for an L0/L1/L2 envelope, writes it
    * with source='cold_start' + imported_batch_id stamp. Each seed is one-shot:
    * either it produces a node (exhausted=success) or gets dropped (exhausted=
    * drift_reject / fetch_fail). When all candidates are exhausted, writes a
@@ -1500,7 +1500,7 @@ class ConstellationEngine {
     // Pool-coverage dedup: skip seeds whose embedding is already very close
     // to an existing node — bootstrap shouldn't re-fetch what user writes or
     // earlier cold-start cycles already covered. NB: planning §7.4 described
-    // candidate-vs-seed relevance at 0.40; the deployed flow uses Sonnet
+    // candidate-vs-seed relevance at 0.40; the deployed flow uses LLM
     // envelope generation (not web_fetch + drift), so this check inverted into
     // pool-coverage dedup at 0.85. Env override matches the spec name.
     const driftThreshold = Number(process.env.MIMIR_BOOTSTRAP_DRIFT_THRESHOLD || 0.85);
@@ -1522,7 +1522,7 @@ class ConstellationEngine {
       }
     } catch { /* empty vec0 or query error → proceed without drift filter */ }
 
-    // Fetch envelope from Sonnet. Synchronous within the tick; the dispatcher
+    // Fetch envelope from the LLM. Synchronous within the tick; the dispatcher
     // tick caller is async-tolerant. 45s ceiling so a stuck LLM doesn't pin
     // the tick forever.
     try {
@@ -1544,7 +1544,7 @@ class ConstellationEngine {
       const env = this._parseEnvelopeReply(text);
       if (!env.l0 || !env.l1) {
         // Mark exhausted on malformed output so we don't burn LLM budget on
-        // the same seed every tick. Sonnet rarely repeats a misformat.
+        // the same seed every tick. The LLM rarely repeats a misformat.
         seeds.exhausted_seeds = [...exhaustedSet, seed];
         this._writeAutonomySeeds(seeds);
         this._writePulseHint('cold_start_fetch_malformed', { seed });
@@ -1581,7 +1581,7 @@ class ConstellationEngine {
   }
 
   /**
-   * Parse Sonnet's L0/L1/L2 envelope reply. Tolerates leading/trailing prose
+   * Parse the LLM's L0/L1/L2 envelope reply. Tolerates leading/trailing prose
    * and continuation lines (subsequent unprefixed lines fold into the most
    * recent layer). Returns { l0, l1, l2 } with empty strings for missing parts.
    */
@@ -1656,8 +1656,8 @@ class ConstellationEngine {
   }
 
   /**
-   * Q5/H3 — async Sonnet seed expansion. Wizard hands us 8 chip tags + 280
-   * chars freetext; Sonnet expands that into a topic list the bootstrap fetch
+   * Q5/H3 — async LLM seed expansion. Wizard hands us 8 chip tags + 280
+   * chars freetext; the LLM expands that into a topic list the bootstrap fetch
    * loop walks. Returns immediately (POST endpoint stays snappy); the LLM call
    * runs in the background and writes engine_meta.autonomy_seeds on success.
    * Retries on next tick if llm_extracted_at remains null.
@@ -2586,13 +2586,13 @@ class ConstellationEngine {
 
   /**
    * L1 Consolidation — find high-cosine neighbors of a newly written node,
-   * ask Sonnet to judge FUSE / SUPERSEDE / INDEPENDENT.
-   * Runs async, non-blocking. Modifies DB only if Sonnet returns FUSE or SUPERSEDE.
+   * ask the judge LLM to classify FUSE / SUPERSEDE / INDEPENDENT.
+   * Runs async, non-blocking. Modifies DB only on FUSE or SUPERSEDE verdict.
    */
   async _consolidationCheck(newNodeId, newEmbedding, { l0, l1, l2, nodeType = 'knowledge', source = null, eventAt = null }) {
     try {
       // L3 (anti-repetition): for autonomous-mimir-* writes of reflection /
-      // tension-resolution, override the Infinity gate so Sonnet judge can FUSE
+      // tension-resolution, override the Infinity gate so the judge LLM can FUSE
       // duplicate Mímir syntheses. profile-dim stays Infinity per master plan §7
       // (dialectic must add a new dim, never overwrite). User-authored writes are
       // unaffected — the relax only fires when the new node's source is a Mímir
@@ -2658,7 +2658,7 @@ class ConstellationEngine {
       console.log(`[Consolidation] ── Check for "${(l0 || '').slice(0, 50)}" (${nodeType}, threshold=${typeThreshold}) ── ${candidates.length} neighbor(s)`);
       if (liveBus) liveBus.safeEmit('engine.consolidation', { status: 'work', candidates: candidates.length, nodeType, l0: (l0 || '').slice(0, 60), new_id: newNodeId });
 
-      // For each candidate, load node content and ask Sonnet
+      // For each candidate, load node content and ask the judge LLM
       for (const cand of candidates) {
         const existing = this.db.prepare(
           "SELECT id, l0, l1, l2, created_at, event_at, state, node_type, source FROM nodes WHERE id = ? AND state = 'active'"
@@ -2666,7 +2666,7 @@ class ConstellationEngine {
         if (!existing) continue;
 
         // NEVER fuse/supersede immutable node types — except L3 relax: a Mímir-
-        // vs-Mímir collision on reflection/tension-resolution can fuse via Sonnet.
+        // vs-Mímir collision on reflection/tension-resolution can fuse via the judge LLM.
         const existingThreshold = FUSION_THRESHOLD_BY_TYPE[existing.node_type] ?? CONSOLIDATION_COSINE_THRESHOLD;
         const existingIsAutonomousMimir = typeof existing.source === 'string' && existing.source.startsWith('autonomous:mimir-');
         const existingRelaxable = existingIsAutonomousMimir && RELAXABLE_MIMIR_TYPES.has(existing.node_type);
@@ -2682,7 +2682,7 @@ class ConstellationEngine {
         ).get(newNodeId, cand.nodeId);
         if (alreadySuperseded) continue;
 
-        // 19.2: Engineering auto-supersede — skip Sonnet judge when tag overlap signals same problem
+        // 19.2: Engineering auto-supersede — skip the judge call when tag overlap signals same problem
         if (nodeType === 'engineering' && existing.node_type === 'engineering' && cand.cosSim >= 0.75) {
           try {
             const newTagRow = this.db.prepare("SELECT tags FROM nodes WHERE id = ?").get(newNodeId);
@@ -2695,7 +2695,7 @@ class ConstellationEngine {
               // Tag overlap score: intersection / min(|A|, |B|) — Jaccard-like but normalized by smaller set
               const overlapScore = overlap.length / Math.min(newTagArr.length, existTagArr.length);
               if (overlapScore >= 0.5) {
-                // Strong tag overlap + high cosine → auto-supersede without Sonnet judge
+                // Strong tag overlap + high cosine → auto-supersede without judge call
                 console.log(`[Consolidation] ⚡ Engineering auto-supersede: "${(l0 || '').slice(0, 40)}" supersedes "${(existing.l0 || '').slice(0, 40)}" (cosSim=${cand.cosSim.toFixed(3)}, tagOverlap=${overlapScore.toFixed(2)}, shared: ${overlap.join(',')})`);
                 this._applySupersede(newNodeId, existing.id);
                 this._logConsolidation({ verdict: 'SUPERSEDE', newNodeId, oldNodeId: existing.id, newL0: l0, oldL0: existing.l0, cosine: cand.cosSim, reason: `auto: engineering tag overlap (${overlap.join(',')})` });
@@ -2719,7 +2719,7 @@ class ConstellationEngine {
         // Enforce allowed-operations constraint per BOTH node types
         // New node's type restricts what it can do; existing node's type restricts what can be done TO it.
         // L3 relax: bypass ALLOWED_OPS for Mímir-vs-Mímir on reflection / tension-resolution
-        // so Sonnet's FUSE verdict isn't immediately downgraded to INDEPENDENT.
+        // so the judge's FUSE verdict isn't immediately downgraded to INDEPENDENT.
         const bypassOpsForMimir = allowMimirRelax && existingRelaxable;
         const newAllowed = bypassOpsForMimir ? null : ALLOWED_OPS_BY_TYPE[nodeType];
         const existAllowed = bypassOpsForMimir ? null : ALLOWED_OPS_BY_TYPE[existing.node_type];
@@ -2774,7 +2774,7 @@ class ConstellationEngine {
           this._logConsolidation({ verdict: 'INDEPENDENT', newNodeId, oldNodeId: existing.id, newL0: l0, oldL0: existing.l0, cosine: cand.cosSim, reason: verdict.reason });
           this._consolidationStats.independent++;
 
-          // 19.3: Auto-create builds_on edge for INDEPENDENT experiment pairs (structural heuristic — runs regardless of Sonnet verdict)
+          // 19.3: Auto-create builds_on edge for INDEPENDENT experiment pairs (structural heuristic — runs regardless of judge verdict)
           if (nodeType === 'experiment' && (existing.node_type === 'experiment') && cand.cosSim >= 0.70) {
             try {
               this.db.prepare(`
@@ -2788,7 +2788,7 @@ class ConstellationEngine {
             }
           }
 
-          // Phase 1 Multi-SA: write Sonnet-classified edge when a valid EDGE_TYPE was supplied.
+          // Phase 1 Multi-SA: write judge-classified edge when a valid EDGE_TYPE was supplied.
           // Priority: fine/precise EDGE_TYPE → FALLBACK_COARSE → no edge (drop preserves graph cleanliness).
           let writeEdgeType = null;
           let writeSource = null;
@@ -2989,7 +2989,7 @@ class ConstellationEngine {
   }
 
   /**
-   * Call Sonnet to judge whether two nodes should be fused, superseded, or kept independent.
+   * Call the judge LLM to classify whether two nodes should be fused, superseded, or kept independent.
    */
   async _callConsolidationJudge(nodeA, nodeB, cosSim) {
     const systemPrompt = `You are a knowledge graph consolidation judge. Given two nodes, decide:
@@ -3398,7 +3398,7 @@ Cosine similarity: ${cosSim.toFixed(3)}`;
       // Flag canonical as timeline-merged (idempotent)
       if (!canonicalTags.includes('timeline_merged')) canonicalTags.push('timeline_merged');
 
-      // Haiku-rewritten L0/L1 preferred; fall back to canonical if judge omitted them
+      // Judge-rewritten L0/L1 preferred; fall back to canonical if judge omitted them
       const nextL0 = (newL0 && newL0.length > 0) ? newL0 : canonical.l0;
       const nextL1 = (newL1 && newL1.length > 0) ? newL1 : canonical.l1;
 

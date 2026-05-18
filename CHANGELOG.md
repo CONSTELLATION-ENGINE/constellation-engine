@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-05-18
+
+First stable release. Same engine that's been running in production daily, with a final pre-launch polish pass on top of the 0.3.0r26 line.
+
+### Added (1.0.0)
+- **Single-chunk cron delivery** (`src/telegram.js`, `src/cron.js`): cron reports now post as one Telegram message instead of being shredded into ~900-char fragments. `send()` / `sendLong()` accept a `{ style: 'single' | 'layered' }` override; cron paths force `single`. User-driven `/talk` replies still use the layered chunker.
+- **IR anti-hallucination pass** (`src/narrative-ir.js`): duty-section tail now carries an explicit deep-retrieval trigger ("if a fact isn't in this packet, dig — don't invent") plus an anti-fabrication hard rule. Reduces low-confidence completions when the pool covers a topic but the L0/L1 layers are thin.
+- **Top-N force-full precision** (`src/agent-runtime.js`): the top-7 dynamic pool nodes by score now render at `precision='full'` regardless of token budget. Cap raised from the legacy 5-slot heuristic. `POOL_TOP_N_FORCE_FULL` env override (default 7).
+- **RESTART_TOUCH pulse hint** (`src/behavior-logger.js`, `src/pulse-handlers.js`, `src/main.js`, `electron/main.js`): fifth pulse marker joins DEBRIEF / TASK_TOUCH / COGNITIVE_TOUCH / ANCHOR_TOUCH. The agent can request an in-place engine restart via this marker; the Electron launcher catches the exit signal and respawns without dropping session state.
+- **`library_read_log` table** (`scripts/mimir-js/diary.js`): records every library read with a 24h KNN-dedup window. Surfaces as a digest for the consolidation re-sweep loop.
+
+### Changed (1.0.0)
+- **Consolidation cosine threshold** lowered 0.70 → 0.65 (`engine.cjs` `CONSOLIDATION_COSINE_THRESHOLD`). Catches more fusion candidates at the cost of more judge calls; offset by the auto-supersede + type-gate paths.
+- **Reconsolidate batch threshold** raised 0.85 → 0.92 (`scripts/mimir-js/reconsolidate.js` `SUPERSEDE_THRESHOLD`) plus a `SUPERSEDE_BLOCKED_TYPES` gate. The pure-cosine batch path no longer bypasses the judge's TIMELINE_MERGE classification for borderline pairs — true verdicts route through the periodic re-sweep instead.
+- **Lever B re-sweep** added to `engine.cjs` `_consolidationResweep()`: every 6h, re-scan recent active nodes through the full judge. Kill-switch `ENGINE_CONSOLIDATION_RESWEEP=0`.
+
 ### Added (r26)
 - **`/status` payload surfaces mechanism toggles**: `rumination_enabled` and `novelty_gate_enabled` now read out of `getStatus()` alongside `sa` and `leiden`, so dashboards can pull mechanism state from one endpoint without polling `/rumination/status` and `/hebb/status` separately. `/config` GET/POST still authoritative for runtime flips.
 
