@@ -98,8 +98,7 @@
           ]
         }
       ],
-      "icon": "build-resources/icon.ico",
-      "signAndEditExecutable": false
+      "icon": "build-resources/icon.ico"
     },
     "linux": {
       "target": [
@@ -116,7 +115,13 @@
     "nsis": {
       "oneClick": false,
       "perMachine": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Constellation",
+      "installerIcon": "build-resources/icon.ico",
+      "uninstallerIcon": "build-resources/icon.ico",
+      "installerHeaderIcon": "build-resources/icon.ico"
     },
     "publish": [
       {

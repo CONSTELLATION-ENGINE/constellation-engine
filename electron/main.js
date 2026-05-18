@@ -33,6 +33,8 @@ const sentinel   = require('./onboarding/sentinel');
 const downloader = require('./onboarding/downloader');
 const llmConfig  = require('./onboarding/llm-config');
 
+const CE_APP_ICON = path.join(__dirname, 'build-resources', process.platform === 'win32' ? 'icon.ico' : 'icon.png');
+
 const DEFAULT_PORT   = parseInt(process.env.CONSTELLATION_PORT || '18800', 10);
 // First-boot worst-case = base init (~5–10s) + Mímir warmup serial calls,
 // dominated by /embed which awaits a cold BGE-M3 ONNX load (~30–50s on
@@ -742,6 +744,7 @@ function createSplash() {
     resizable: false,
     alwaysOnTop: true,
     backgroundColor: '#0b0e1a',
+    icon: CE_APP_ICON,
     webPreferences: {
       contextIsolation: true,
       preload: path.join(__dirname, 'splash-preload.js'),
@@ -755,6 +758,7 @@ function createMainWindow(port) {
     width: 1200,
     height: 800,
     backgroundColor: '#0b0e1a',
+    icon: CE_APP_ICON,
     webPreferences: {
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
@@ -774,6 +778,7 @@ function createWizard(opts = {}) {
     height: 720,
     backgroundColor: '#0b0e1a',
     resizable: true,
+    icon: CE_APP_ICON,
     webPreferences: {
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
@@ -1121,6 +1126,7 @@ function createPermissionWindow(onAck) {
     height: 760,
     title: 'Constellation — Permissions',
     autoHideMenuBar: true,
+    icon: CE_APP_ICON,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -1935,6 +1941,7 @@ function showExtractSplash() {
     width: 480, height: 220,
     frame: false, resizable: false, alwaysOnTop: true,
     backgroundColor: '#0b0e1a',
+    icon: CE_APP_ICON,
     webPreferences: { contextIsolation: true },
   });
   // Inline HTML — avoids depending on the to-be-copied views/ tree.
