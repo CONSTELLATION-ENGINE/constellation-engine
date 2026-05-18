@@ -98,7 +98,7 @@
           ]
         }
       ],
-      "icon": "build-resources/icon.png",
+      "icon": "build-resources/icon.ico",
       "signAndEditExecutable": false
     },
     "linux": {
