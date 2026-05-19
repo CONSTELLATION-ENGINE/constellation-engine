@@ -160,6 +160,7 @@ const ALLOWED_OPS_BY_TYPE = {
   'profile-dim':          ['INDEPENDENT'],
   'reflection':           ['INDEPENDENT'],
   'tension-resolution':   ['INDEPENDENT'],
+  'self_act':             ['FUSE', 'TIMELINE_MERGE', 'INDEPENDENT'],
 };
 
 // Sources that are user-authored (not autonomous/debrief). Auto-supersede + dialectic
@@ -2866,7 +2867,7 @@ class ConstellationEngine {
     let judged = 0, fused = 0, superseded = 0, merged = 0, indep = 0, blocked = 0;
     const rowIdToNode = this.db.prepare("SELECT node_id FROM node_rowids WHERE rowid = ?");
     const rowIdLookup = this.db.prepare("SELECT rowid FROM node_rowids WHERE node_id = ?");
-    const embLookup   = this.db.prepare("SELECT embedding FROM node_embeddings WHERE rowid = ?");
+    const embLookup   = this.db.prepare("SELECT embedding FROM node_embeddings WHERE id = ?");
     const nodeLookup  = this.db.prepare(`
       SELECT id, l0, l1, l2, node_type, source, event_at, created_at, state, superseded_at
         FROM nodes WHERE id = ? AND state = 'active' AND superseded_at IS NULL
