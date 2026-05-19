@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-05-19
+
+Hotfix release. Three silent-failure bugs surfaced by a 20-round research-cron sweep (Opus, 2026-05-19) that took the post-1.0.0 codebase as fixed input and walked the cognitive pipeline end-to-end looking for orphan producers / consumers.
+
+### Fixed (1.0.1)
+- **vec0 lookup column rename** (`engine.cjs`): consolidation's per-candidate embedding pull used `WHERE rowid = ?` on the sqlite-vec virtual table, but `vec0` exposes the primary key as `id`, not `rowid`. The SELECT returned nothing, leaving the consolidation judge embedding-blind on every pair. Fix: `WHERE id = ?`.
+- **`mimir_actions` table now actually populated** (`src/dashboard.js`): the autonomy picker's success branch wrote to `mimir_outreach_audit` but never wrote the canonical row to `mimir_actions`. Consumer side (Critic gate, demotion-sweep, persona caps, outreach review queue) was reading from an always-empty table — silently no-op'd in production. Added the missing INSERT with try/catch + action guard + meta sanitization.
+- **`self_act` consolidation policy** (`engine.cjs` `ALLOWED_OPS_BY_TYPE`): Mímir-emitted `self_act` nodes had no entry in the policy map, so the type gate rejected them before reaching the judge. Added `'self_act': ['FUSE', 'TIMELINE_MERGE', 'INDEPENDENT']` so they participate in consolidation like any other autonomous-source type.
+
+### Notes (1.0.1)
+- No schema migration; no env-var changes; no API changes.
+- Dashboard bundle rebuilt to bake the `mimir_actions` INSERT into the obfuscated dist (the build-platform.sh `[1.5/6]` overlay step picks up the new bundle).
+- electron-updater will offer 1.0.1 as a drop-in update for 1.0.0 installs once the release is published.
+
 ## [1.0.0] - 2026-05-18
 
 First stable release. Same engine that's been running in production daily, with a final pre-launch polish pass on top of the 0.3.0r26 line.
