@@ -59,10 +59,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 /**
  * @typedef {Object} RuntimeConfig
  * @property {number} [contextBudget=180000] - Total token budget
- * @property {number} [fixedRatio=0.30] - Fixed layer ratio
- * @property {number} [constellationRatio=0.30] - Constellation render ratio
+ * @property {number} [fixedRatio=0.10] - Fixed layer ratio
+ * @property {number} [constellationRatio=0.28] - Constellation render ratio
  * @property {number} [summaryRatio=0.10] - Summary layer ratio
- * @property {number} [activeRatio=0.30] - Active messages ratio
+ * @property {number} [activeRatio=0.52] - Active messages ratio
  * @property {number} [compactionThreshold=0.70] - Trigger compaction when active tokens exceed this ratio of activeRatio budget
  * @property {number} [maxToolRounds=25] - Max tool-use loop iterations
  * @property {string[]} [fixedFiles] - Paths to always-inject files (SYSTEM_PREAMBLE.md, COGNITIVE_STATE.md, etc.)
@@ -147,12 +147,14 @@ const DEFAULTS = {
   },
   runtime: {
     contextBudget: 180_000,
-    fixedRatio: 0.30,
-    constellationRatio: 0.30,
+    fixedRatio: 0.10,
+    constellationRatio: 0.28,
     summaryRatio: 0.10,
-    activeRatio: 0.30,
+    activeRatio: 0.52,
     compactionThreshold: 0.70,
     maxToolRounds: 25,
+    maxTurnTotalTokens: 2_000_000,
+    sessionTokenBudget: 10_000_000,
     fixedFiles: ['identity/SYSTEM_PREAMBLE.md', 'identity/COMMUNICATION_STYLE.md'],
   },
 };

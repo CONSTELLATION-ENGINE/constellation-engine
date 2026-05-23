@@ -70,6 +70,8 @@
     "activeRatio": 0.52,
     "compactionThreshold": 0.7,
     "maxToolRounds": 30,
+    "maxTurnTotalTokens": 2000000,
+    "sessionTokenBudget": 10000000,
     "fixedFiles": [
       "identity/SYSTEM_PREAMBLE.md",
       "identity/COMMUNICATION_STYLE.md"

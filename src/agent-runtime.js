@@ -75,10 +75,10 @@ async function mimirFetch(url, opts = {}, timeoutMs = 20_000) {
 /**
  * @typedef {Object} RuntimeConfig
  * @property {number} contextBudget - Total token budget, default 180000
- * @property {number} fixedRatio - Fixed layer ratio, default 0.30
- * @property {number} constellationRatio - Constellation layer ratio, default 0.30
+ * @property {number} fixedRatio - Fixed layer ratio, default 0.10
+ * @property {number} constellationRatio - Constellation layer ratio, default 0.28
  * @property {number} summaryRatio - Summary layer ratio, default 0.10
- * @property {number} activeRatio - Active messages ratio, default 0.30
+ * @property {number} activeRatio - Active messages ratio, default 0.52
  * @property {number} compactionThreshold - Trigger compaction when active tokens exceed this ratio of activeRatio budget, default 0.85
  * @property {number} maxToolRounds - Max tool-use loop iterations, default 15
  * @property {string[]} fixedFiles - Paths to always-injected files (SYSTEM_PREAMBLE.md, COGNITIVE_STATE.md, etc.)
@@ -108,16 +108,16 @@ const DEFAULT_CONFIG = {
   compileMode: 'single',       // 'single' = standard primary-model path; 'two_pass' = Mode B + Route C (9B)
   twoPassR1Model: '',          // R1 model override; empty = use llm.compactModel
   contextBudget: 180000,
-  fixedRatio: 0.30,
-  constellationRatio: 0.30,
+  fixedRatio: 0.10,
+  constellationRatio: 0.28,
   summaryRatio: 0.10,
-  activeRatio: 0.30,
+  activeRatio: 0.52,
   compactionThreshold: 0.85,
   maxToolRounds: 40,
   maxToolCallsPerTurn: 24,
   maxRepeatedToolSignature: 2,
-  maxTurnTotalTokens: 360000,
-  sessionTokenBudget: 1000000,
+  maxTurnTotalTokens: 2000000,
+  sessionTokenBudget: 10000000,
   sessionTimeoutMs: 14400000,
   maxToolResultCharsPerCall: 12000,
   maxToolResultCharsPerTurn: 32000,
