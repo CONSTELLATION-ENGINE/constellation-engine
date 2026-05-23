@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed (Unreleased)
+- **Codex-compatible provider budget defaults** (`config.example.json`, `src/config.js`, `src/agent-runtime.js`): raised runtime soft warning defaults to `maxTurnTotalTokens=2000000` and `sessionTokenBudget=10000000`, and aligned fallback context ratios to `fixedRatio=0.10`, `constellationRatio=0.28`, `activeRatio=0.52`. This prevents Claude-era defaults from reappearing when configs are regenerated or partially missing, especially for Codex/OpenAI-compatible harnesses that report system/MCP overhead in usage.
+
 ## [1.0.1] - 2026-05-19
 
 Hotfix release. Three silent-failure bugs surfaced by a 20-round research-cron sweep (Opus, 2026-05-19) that took the post-1.0.0 codebase as fixed input and walked the cognitive pipeline end-to-end looking for orphan producers / consumers.
