@@ -1045,7 +1045,7 @@ ipcMain.handle('onboarding:llm-test-connection', async (_evt, opts = {}) => {
   try {
     const { cardId, apiKey, baseUrl, model } = opts || {};
     if (!cardId) return { ok: false, error: 'cardId required' };
-    return await llmConfig.testConnection(cardId, { apiKey, baseUrl, model });
+    return await llmConfig.testConnection(cardId, { apiKey, baseUrl, model, repoRoot: ENGINE_DIR });
   } catch (err) {
     return { ok: false, error: err?.message || String(err) };
   }

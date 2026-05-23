@@ -299,12 +299,15 @@ async function boot(configPath, options = {}) {
   }
 
   // ─── Step 1.5: Probe user-managed local gateway if opted in ───────────────────
-  // authMode='gateway' (Ollama/LM Studio/Custom) and 'claude-proxy' both point at
-  // a user-managed OpenAI-compatible local server. We don't spawn anything — if
-  // the user opted into claude-proxy mode by hand-editing config, fail fast at
-  // boot rather than on the first LLM call.
+  // authMode='gateway' can be remote, user-managed local, or the bundled
+  // Codex OAuth shim. We only preflight gateway configs that explicitly opt
+  // into a local shim; API-style gateway URLs are tested in the wizard and are
+  // allowed to fail on first real provider call.
   let gatewayResult = null;
-  if ((config.llm?.authMode || '') === 'claude-proxy') {
+  const shouldProbeGateway =
+    (config.llm?.authMode || '') === 'claude-proxy'
+    || ((config.llm?.authMode || '') === 'gateway' && String(config.llm?.gatewayVendor || '').toLowerCase() === 'codex-shim');
+  if (shouldProbeGateway) {
     console.log('  [1.5]  Probing local gateway...');
     gatewayResult = await ensureGatewayReady(config.llm, console);
   }

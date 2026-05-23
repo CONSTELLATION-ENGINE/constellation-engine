@@ -9,6 +9,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { spawn } = require('node:child_process');
 
 const ROLE_IDS = ['main', 'anamnesis', 'consolidation', 'worker', 'explore', 'compact'];
 
@@ -52,6 +53,25 @@ const PROVIDER_CARDS = [
       { id: 'gpt-5-mini', label: 'GPT-5 mini (balanced, recommended)', tier: 'recommended' },
       { id: 'gpt-5-nano', label: 'GPT-5 nano (fastest, cheapest)',     tier: 'fast' },
       { id: 'gpt-4o',     label: 'GPT-4o (legacy)',                    tier: 'legacy' },
+    ],
+  },
+  {
+    id: 'codex-oauth',
+    providerId: 'gateway',
+    wireFormat: 'openai-completions',
+    name: 'Codex OAuth',
+    icon: '⌘',
+    tag: 'Codex CLI',
+    desc: 'Use your local Codex CLI login. Optional path for ChatGPT/Codex users.',
+    envVar: null,
+    apiKeyUrl: 'https://help.openai.com/en/articles/11369540-using-codex-with-your-chatgpt-plan',
+    defaultBaseUrl: 'http://127.0.0.1:3457/v1',
+    needsKey: false,
+    helpText: 'Install Codex CLI, run `codex login`, then click Test connection. Constellation only talks to a local shim and never reads your OAuth token.',
+    knownModels: [
+      { id: 'gpt-5.5',      label: 'Codex premium tier',                tier: 'premium' },
+      { id: 'gpt-5.4-mini', label: 'Codex balanced tier (recommended)', tier: 'recommended' },
+      { id: 'gpt-5',        label: 'GPT-5 fallback',                    tier: 'balanced' },
     ],
   },
   {
@@ -190,6 +210,10 @@ async function listModels(cardId, opts = {}) {
       // Custom endpoints are user-supplied — many local bridges don't implement
       // /v1/models at all. Skip the live probe entirely; UI uses free-text entry.
       live = null;
+    } else if (cardId === 'codex-oauth') {
+      // The shim exposes a small static /v1/models list. Keep the wizard fast
+      // and avoid starting Codex just to render a dropdown.
+      live = null;
     } else if (cardId === 'openai' || cardId === 'openrouter' || cardId === 'vllm' || cardId === 'lmstudio') {
       const headers = {};
       if (apiKey) headers['authorization'] = `Bearer ${apiKey}`;
@@ -260,7 +284,7 @@ async function testConnection(cardId, opts = {}) {
   if (card.needsKey && !apiKey) return { ok: false, error: `API key required for ${card.name}` };
   // Custom card: most local OAuth bridges expect a non-empty Authorization header
   // even when they don't validate it. Substitute a 'local' sentinel when empty.
-  if (cardId === 'custom' && !apiKey) apiKey = 'local';
+  if ((cardId === 'custom' || cardId === 'codex-oauth') && !apiKey) apiKey = 'local';
 
   const t0 = Date.now();
   try {
@@ -288,7 +312,12 @@ async function testConnection(cardId, opts = {}) {
       });
       return await _interpretGeneric(r, t0, 'gemini');
     }
-    // OpenAI-compatible: openai / openrouter / ollama / lmstudio / vllm
+    if (cardId === 'codex-oauth') {
+      const repoRoot = opts.repoRoot || process.cwd();
+      const ready = await ensureCodexShimReady({ repoRoot, baseUrl, model });
+      if (!ready.ok) return { ok: false, error: ready.error, hint: ready.hint };
+    }
+    // OpenAI-compatible: openai / openrouter / ollama / lmstudio / vllm / codex-oauth
     const headers = { 'content-type': 'application/json' };
     if (apiKey) headers['authorization'] = `Bearer ${apiKey}`;
     const r = await _fetch(`${baseUrl}/chat/completions`, {
@@ -338,10 +367,62 @@ function _hintForError(cardId, err) {
     if (cardId === 'ollama')   return 'Could not reach Ollama. Run `ollama serve` and try again.';
     if (cardId === 'lmstudio') return 'Could not reach LM Studio. Open the app and click "Start Server".';
     if (cardId === 'vllm')     return 'Could not reach vLLM. Confirm `vllm serve` is running on the configured port.';
+    if (cardId === 'codex-oauth') return 'Could not reach the local Codex shim. Install Codex CLI, run `codex login`, then test again.';
     return 'Network error — check internet connection and base URL.';
   }
   if (/abort|timeout/i.test(m)) return 'Request timed out (10s). Server may be slow to respond.';
   return null;
+}
+
+function _gatewayRoot(baseUrl) {
+  return String(baseUrl || '').replace(/\/+$/, '').replace(/\/v1$/i, '');
+}
+
+async function ensureCodexShimReady({ repoRoot, baseUrl, model }) {
+  const root = _gatewayRoot(baseUrl || 'http://127.0.0.1:3457/v1');
+  const health = await probeCodexShimHealth(root, 1500);
+  if (health.ok) return health;
+
+  const shimPath = path.join(repoRoot, 'scripts', 'codex-shim', 'server.js');
+  if (!fs.existsSync(shimPath)) {
+    return { ok: false, error: 'Codex shim is missing from this installation.' };
+  }
+
+  const child = spawn(process.execPath, [shimPath], {
+    cwd: repoRoot,
+    detached: true,
+    stdio: 'ignore',
+    env: {
+      ...process.env,
+      CODEX_SHIM_MODEL: model || process.env.CODEX_SHIM_MODEL || '',
+    },
+  });
+  child.unref();
+
+  const deadline = Date.now() + 25_000;
+  let last = health.error || 'not ready';
+  while (Date.now() < deadline) {
+    await new Promise(resolve => setTimeout(resolve, 700));
+    const probe = await probeCodexShimHealth(root, 2000);
+    if (probe.ok) return { ok: true, started: true, pid: child.pid, root };
+    last = probe.error || `HTTP ${probe.status || 'unknown'}`;
+  }
+  return {
+    ok: false,
+    error: `Codex shim did not become ready at ${root}: ${last}`,
+    hint: 'Make sure Codex CLI is installed and run `codex login` once in a terminal.',
+  };
+}
+
+async function probeCodexShimHealth(root, timeoutMs) {
+  try {
+    const r = await _fetch(`${root}/healthz`, { timeoutMs });
+    if (!r.ok) return { ok: false, status: r.status, root };
+    const data = await r.json().catch(() => ({}));
+    return { ok: true, status: r.status, root, data };
+  } catch (err) {
+    return { ok: false, root, error: err?.message || String(err) };
+  }
 }
 
 async function _fetch(url, opts = {}) {
@@ -492,6 +573,15 @@ function saveConfig({ tier, roles, repoRoot }) {
       completedAt: new Date().toISOString(),
     },
   };
+  if (mainCard.id === 'codex-oauth') {
+    Object.assign(configBody.llm, {
+      provider: 'codex-oauth',
+      gatewayVendor: 'codex-shim',
+      gatewayCommand: 'node scripts/codex-shim/server.js',
+      gatewayHealthModel: mainSlot.model,
+      gatewayStartupTimeoutMs: 25_000,
+    });
+  }
 
   const envPath        = path.join(repoRoot, '.env');
   const envTmp         = `${envPath}.tmp`;

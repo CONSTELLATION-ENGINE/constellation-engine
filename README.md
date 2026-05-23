@@ -247,7 +247,9 @@ The goal is not to remember everything forever. That creates a polluted mind. Th
 
 Constellation does not store its long-term identity inside model weights. The agent's continuity lives in the star map, conversation store, cognitive state, task state, and experiential traces. The model can be swapped.
 
-That means an agent can use a cloud model for complex reasoning, a local model for private or low-cost work, a small model for background summarisation, a stronger model for writing or planning, or different providers over time. Anthropic, OpenAI, Ollama, Gemini — all supported out of the box.
+That means an agent can use a cloud model for complex reasoning, a local model for private or low-cost work, a small model for background summarisation, a stronger model for writing or planning, or different providers over time. Anthropic, OpenAI, Ollama, Gemini, OpenRouter, LM Studio, vLLM, and an optional local Codex CLI bridge are supported out of the box.
+
+The Codex option is a local convenience path for users who have installed Codex CLI and signed in themselves with `codex login`. Constellation starts a localhost shim that calls the user's local `codex exec`; it does not collect, read, store, or relay the user's Codex OAuth token. If that path fails, use a normal API-key provider or another OpenAI-compatible endpoint.
 
 The voice can change. **The memory remains.**
 
@@ -296,7 +298,7 @@ Download the latest installer from [constellation-engine.com](https://constellat
 
 1. **Prerequisites**: Node.js 20+
 2. **Install**: `npm install`
-3. **Configure**: `cp .env.example .env` and fill in at least one provider key (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or point to a local Ollama instance)
+3. **Configure**: `cp .env.example .env` and fill in at least one provider key (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or point to a local Ollama/Codex-compatible endpoint)
 4. **Run engine + dashboard**: `npm start` (boots on `http://127.0.0.1:18800`)
 5. **Run desktop shell** (optional): `cd electron && npm install && npm start`
 
