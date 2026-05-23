@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed (Unreleased)
 - **Codex-compatible provider budget defaults** (`config.example.json`, `src/config.js`, `src/agent-runtime.js`): raised runtime soft warning defaults to `maxTurnTotalTokens=2000000` and `sessionTokenBudget=10000000`, and aligned fallback context ratios to `fixedRatio=0.10`, `constellationRatio=0.28`, `activeRatio=0.52`. This prevents Claude-era defaults from reappearing when configs are regenerated or partially missing, especially for Codex/OpenAI-compatible harnesses that report system/MCP overhead in usage.
+- **Star-map dense retrieval hardening** (`engine.cjs`, `scripts/migrations/0003-semantic-anchor.sql`, `scripts/audit-star-embeddings.cjs`, `scripts/backfill-star-embeddings.cjs`): added optional `semantic_anchor` / `embedding_text_version` columns and a shared embedding-text builder so broad nodes can improve dense retrieval without bloating L0/L1/L2. Added dry-run-first audit/backfill tools for missing vec0 rows; the backfill writes only `node_rowids` / `node_embeddings` and does not create edges.
 
 ## [1.0.1] - 2026-05-19
 

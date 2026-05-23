@@ -1783,6 +1783,19 @@ class ConstellationEngine {
   }
 
   /**
+   * Build the text surface used for persistent vec0 embeddings.
+   *
+   * Most nodes use the compact L0+L1 surface. Broad identity/principle nodes can
+   * opt into semantic_anchor so dense retrieval sees aliases and trigger phrases
+   * without bloating the human-readable envelope.
+   */
+  _buildEmbeddingText(node = {}) {
+    const anchor = typeof node.semantic_anchor === 'string' ? node.semantic_anchor.trim() : '';
+    if (anchor) return anchor;
+    return `${node.l0 || ''} ${node.l1 || ''}`.trim();
+  }
+
+  /**
    * _normalizeTags — last-resort defense: guarantee tags is always a clean JS array.
    * Handles: array (pass-through), comma-string, bracket-no-quotes, JSON string, anything else → []
    */
@@ -1996,7 +2009,7 @@ class ConstellationEngine {
    * remember — write-and-diffuse (Ripple Write)
    * R8: auto-embeds the node and writes the vector into the vec0 table.
    */
-  async remember({ id, l0, l1, l2, tags = [], tone = 'analytical', valence = 0, arousal = 0.5, weight = 1.0, source = 'knowledge', edges = [], node_type = null, skipDedup = false, event_at = null, subkind = null, imported_batch_id = null }) {
+  async remember({ id, l0, l1, l2, tags = [], tone = 'analytical', valence = 0, arousal = 0.5, weight = 1.0, source = 'knowledge', edges = [], node_type = null, skipDedup = false, event_at = null, subkind = null, imported_batch_id = null, semantic_anchor = null, embedding_text_version = null }) {
     tags = this._normalizeTags(tags);
     tags = this._validateTags(id, tags);
     const resolvedType = node_type || this._classifyNodeType(id, tags, l2);
@@ -2028,14 +2041,17 @@ class ConstellationEngine {
     // (so INSERT OR REPLACE doesn't blank out fields not in the caller's payload).
     let resolvedEventAt = event_at;
     let resolvedSubkind = subkind;
-    if (!resolvedEventAt || resolvedSubkind === null) {
-      const existing = this.db.prepare("SELECT event_at, subkind FROM nodes WHERE id = ?").get(id);
+    let resolvedSemanticAnchor = semantic_anchor;
+    let resolvedEmbeddingTextVersion = embedding_text_version;
+    if (!resolvedEventAt || resolvedSubkind === null || resolvedSemanticAnchor === null || resolvedEmbeddingTextVersion === null) {
+      const existing = this.db.prepare("SELECT event_at, subkind, semantic_anchor, embedding_text_version FROM nodes WHERE id = ?").get(id);
       if (!resolvedEventAt) resolvedEventAt = existing?.event_at || now;
       if (resolvedSubkind === null) resolvedSubkind = existing?.subkind ?? null;
+      if (resolvedSemanticAnchor === null) resolvedSemanticAnchor = existing?.semantic_anchor ?? null;
+      if (resolvedEmbeddingTextVersion === null) resolvedEmbeddingTextVersion = existing?.embedding_text_version ?? 1;
     }
 
-    // Generate embedding from L1 (best balance of signal vs length)
-    const embedText = `${l0} ${l1}`;
+    const embedText = this._buildEmbeddingText({ l0, l1, semantic_anchor: resolvedSemanticAnchor });
     let embedding = null;
     try {
       embedding = await this._embed(embedText);
@@ -2046,8 +2062,8 @@ class ConstellationEngine {
     const ownerId = this._resolveOwnerStamp();
 
     const insertNode = this.db.prepare(`
-      INSERT OR REPLACE INTO nodes (id, state, created_at, accessed_at, l0, l1, l2, tags, tone, valence, arousal, weight, conn_count, access_count, source, node_type, updated_at, owner_id, event_at, subkind, imported_batch_id)
-      VALUES (?, 'active', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)
+      INSERT OR REPLACE INTO nodes (id, state, created_at, accessed_at, l0, l1, l2, tags, tone, valence, arousal, weight, conn_count, access_count, source, node_type, updated_at, owner_id, event_at, subkind, imported_batch_id, semantic_anchor, embedding_text_version)
+      VALUES (?, 'active', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     // Canonical edge types — 5 core + 3 system (04-11 decision: reduced from 17)
@@ -2086,7 +2102,7 @@ class ConstellationEngine {
     const insertVec = this.db.prepare(`INSERT INTO node_embeddings (id, embedding) VALUES (?, ?)`);
 
     const txn = this.db.transaction(() => {
-      insertNode.run(id, now, now, l0, l1, l2, JSON.stringify(tags), tone, valence, arousal, weight, edges.length, source, resolvedType, now, ownerId, resolvedEventAt, resolvedSubkind, imported_batch_id);
+      insertNode.run(id, now, now, l0, l1, l2, JSON.stringify(tags), tone, valence, arousal, weight, edges.length, source, resolvedType, now, ownerId, resolvedEventAt, resolvedSubkind, imported_batch_id, resolvedSemanticAnchor, resolvedEmbeddingTextVersion || 1);
 
       // Re-remember of a node that was previously superseded → revive its edge web.
       this._reactivateNodeEdges(id);
@@ -2461,7 +2477,7 @@ class ConstellationEngine {
    * If L0 changes, re-embeds the node.
    */
   async updateNode(id, fields = {}) {
-    const existing = this.db.prepare("SELECT id, l0, l1, l2, tags, node_type FROM nodes WHERE id = ? AND state = 'active'").get(id);
+    const existing = this.db.prepare("SELECT id, l0, l1, l2, tags, node_type, semantic_anchor, embedding_text_version FROM nodes WHERE id = ? AND state = 'active'").get(id);
     if (!existing) {
       console.log(`[Engine] updateNode: node ${id} not found or dormant`);
       return null;
@@ -2473,7 +2489,7 @@ class ConstellationEngine {
 
     // Updatable fields: l0, l1, l2, tags, weight, tone, valence, arousal
     for (const [key, val] of Object.entries(fields)) {
-      if (['l0', 'l1', 'l2', 'tone', 'weight', 'node_type'].includes(key)) {
+      if (['l0', 'l1', 'l2', 'tone', 'weight', 'node_type', 'semantic_anchor', 'embedding_text_version'].includes(key)) {
         updates.push(`${key} = ?`);
         params.push(val);
       } else if (key === 'tags') {
@@ -2497,9 +2513,17 @@ class ConstellationEngine {
 
     this.db.prepare(`UPDATE nodes SET ${updates.join(', ')} WHERE id = ?`).run(...params);
 
-    // Re-embed if L0 changed
-    if (fields.l0 && fields.l0 !== existing.l0) {
-      const embedText = `${fields.l0} ${fields.l1 || existing.l1 || ''}`;
+    // Re-embed if the embedding surface changed.
+    if (
+      (Object.hasOwn(fields, 'l0') && fields.l0 !== existing.l0) ||
+      (Object.hasOwn(fields, 'l1') && fields.l1 !== existing.l1) ||
+      (Object.hasOwn(fields, 'semantic_anchor') && fields.semantic_anchor !== existing.semantic_anchor)
+    ) {
+      const embedText = this._buildEmbeddingText({
+        l0: Object.hasOwn(fields, 'l0') ? fields.l0 : existing.l0,
+        l1: Object.hasOwn(fields, 'l1') ? fields.l1 : existing.l1,
+        semantic_anchor: Object.hasOwn(fields, 'semantic_anchor') ? fields.semantic_anchor : existing.semantic_anchor,
+      });
       const embedding = await this._embed(embedText);
       if (embedding) {
         const getRowid = this.db.prepare("SELECT rowid FROM node_rowids WHERE node_id = ?");
@@ -4932,7 +4956,7 @@ ${rawText}`;
    * embedAll — generate embeddings for all nodes that lack them (batch backfill)
    */
   async embedAll() {
-    const nodes = this.db.prepare("SELECT id, l0, l1 FROM nodes WHERE state = 'active'").all();
+    const nodes = this.db.prepare("SELECT id, l0, l1, semantic_anchor FROM nodes WHERE state = 'active'").all();
     const upsertRowid = this.db.prepare(`INSERT OR IGNORE INTO node_rowids (node_id) VALUES (?)`);
     const getRowid = this.db.prepare(`SELECT rowid FROM node_rowids WHERE node_id = ?`);
     const deleteVec = this.db.prepare(`DELETE FROM node_embeddings WHERE id = ?`);
@@ -4940,7 +4964,7 @@ ${rawText}`;
 
     let count = 0;
     for (const node of nodes) {
-      const embedding = await this._embed(`${node.l0} ${node.l1}`);
+      const embedding = await this._embed(this._buildEmbeddingText(node));
       this.db.transaction(() => {
         upsertRowid.run(node.id);
         const row = getRowid.get(node.id);
