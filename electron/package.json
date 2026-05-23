@@ -38,6 +38,8 @@
       "preload.js",
       "onboarding/**/*",
       "views/**/*",
+      "build-resources/icon.ico",
+      "build-resources/icon.png",
       "package.json"
     ],
     "extraResources": [

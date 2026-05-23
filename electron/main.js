@@ -110,9 +110,13 @@ if (!gotLock) {
   app.quit();
 } else {
   app.on('second-instance', () => {
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      mainWindow.focus();
+    const target = (mainWindow && !mainWindow.isDestroyed()) ? mainWindow
+                 : (wizardWindow && !wizardWindow.isDestroyed()) ? wizardWindow
+                 : null;
+    if (target) {
+      if (target.isMinimized()) target.restore();
+      target.show();
+      target.focus();
     }
   });
 }
