@@ -91,19 +91,26 @@ export async function ensureGatewayReady(llmConfig, logger = console) {
 
 async function startCodexShim(llmConfig, logger) {
   const rootDir = resolve(process.cwd());
-  const command = llmConfig.gatewayCommand || 'node scripts/codex-shim/server.js';
+  const shimScript = resolve(rootDir, 'scripts', 'codex-shim', 'server.js');
+  const command = process.execPath;
+  const args = [shimScript];
   const startupTimeoutMs = Math.max(5000, Number(llmConfig.gatewayStartupTimeoutMs || 25000));
   const model = llmConfig.gatewayHealthModel || llmConfig.primaryModel || 'gpt-5.4-mini';
   const baseUrl = llmConfig.baseUrl || 'http://127.0.0.1:3457/v1';
+  const shimEndpoint = parseShimEndpoint(baseUrl);
 
   logger.log('         → Starting local Codex OAuth shim...');
-  logger.log('         → ' + command);
-  const child = spawn(command, {
+  logger.log('         → ' + [command, ...args].join(' '));
+  const child = spawn(command, args, {
     cwd: rootDir,
-    shell: true,
     detached: true,
     stdio: ['ignore', 'pipe', 'pipe'],
-    env: { ...process.env, CODEX_SHIM_MODEL: model },
+    env: {
+      ...process.env,
+      CODEX_SHIM_MODEL: model,
+      CODEX_SHIM_HOST: shimEndpoint.host,
+      CODEX_SHIM_PORT: String(shimEndpoint.port),
+    },
   });
   child.stdout?.on('data', (d) => process.stdout.write('[codex-shim] ' + d));
   child.stderr?.on('data', (d) => process.stderr.write('[codex-shim] ' + d));
@@ -121,4 +128,16 @@ async function startCodexShim(llmConfig, logger) {
     lastErr = health.error || `status ${health.status || 'unknown'}`;
   }
   throw new Error(`Codex shim failed to become healthy after ${startupTimeoutMs}ms. Last probe: ${lastErr || 'unknown'}`);
+}
+
+function parseShimEndpoint(baseUrl) {
+  try {
+    const u = new URL(toGatewayRoot(baseUrl));
+    return {
+      host: u.hostname || '127.0.0.1',
+      port: Number(u.port || (u.protocol === 'https:' ? 443 : 80)),
+    };
+  } catch {
+    return { host: '127.0.0.1', port: 3457 };
+  }
 }

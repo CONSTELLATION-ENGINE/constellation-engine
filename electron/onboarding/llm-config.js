@@ -577,7 +577,6 @@ function saveConfig({ tier, roles, repoRoot }) {
     Object.assign(configBody.llm, {
       provider: 'codex-oauth',
       gatewayVendor: 'codex-shim',
-      gatewayCommand: 'node scripts/codex-shim/server.js',
       gatewayHealthModel: mainSlot.model,
       gatewayStartupTimeoutMs: 25_000,
     });
