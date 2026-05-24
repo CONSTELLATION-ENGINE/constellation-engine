@@ -2,7 +2,7 @@
 
 Use this for every tagged release and hotfix batch. A GitHub Release is not complete until the public website download buttons are verified against the exact uploaded asset names.
 
-This file is also injected automatically by Constellation Engine's Tool Context Binding when a turn looks like an OSS release, hotfix, version bump, packaging, push, or website-download update.
+In the internal Constellation Engine workflow, this file is injected automatically by Sleipnir Gate when a turn looks like an OSS release, hotfix, version bump, packaging, push, or website-download update. Sleipnir Gate itself is internal main-architecture infrastructure and is not part of the OSS distribution.
 
 ## Preflight
 
