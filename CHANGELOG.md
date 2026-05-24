@@ -7,13 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed (Unreleased)
+## [1.0.2] - 2026-05-24
+
+Hotfix release for Codex-compatible providers, optional Codex OAuth setup, semantic anchor embeddings, and packaged launcher polish.
+
+### Fixed (1.0.2)
 - **Packaged Codex shim cold-start** (`src/gateway-manager.js`, `electron/onboarding/llm-config.js`, `config.example.json`): the Codex OAuth card tested the shim with Electron's bundled Node runtime, but saved `gatewayCommand="node scripts/codex-shim/server.js"` for later boots. Packaged installs on machines without a system `node` could pass first-run setup and then fail to restart the shim after relaunch. The engine now starts the bundled shim with `process.execPath`, no shell dependency, and passes the configured localhost host/port into the shim process.
 - **Codex-compatible provider budget defaults** (`config.example.json`, `src/config.js`, `src/agent-runtime.js`): raised runtime soft warning defaults to `maxTurnTotalTokens=2000000` and `sessionTokenBudget=10000000`, and aligned fallback context ratios to `fixedRatio=0.10`, `constellationRatio=0.28`, `activeRatio=0.52`. This prevents Claude-era defaults from reappearing when configs are regenerated or partially missing, especially for Codex/OpenAI-compatible harnesses that report system/MCP overhead in usage.
 - **Star-map dense retrieval hardening** (`engine.cjs`, `scripts/migrations/0003-semantic-anchor.sql`, `scripts/audit-star-embeddings.cjs`, `scripts/backfill-star-embeddings.cjs`): added optional `semantic_anchor` / `embedding_text_version` columns and a shared embedding-text builder so broad nodes can improve dense retrieval without bloating L0/L1/L2. Added dry-run-first audit/backfill tools for missing vec0 rows; the backfill writes only `node_rowids` / `node_embeddings` and does not create edges.
 - **Electron launcher polish** (`electron/main.js`, `electron/package.json`): second-instance activation now focuses whichever window is actually open (main dashboard or onboarding wizard), and packaged builds explicitly include the canonical icon assets used by the launcher/installer.
 
-### Added (Unreleased)
+### Added (1.0.2)
 - **Optional Codex OAuth provider path** (`electron/onboarding/llm-config.js`, `scripts/codex-shim/server.js`, `src/gateway-manager.js`): first-run setup now offers a Codex CLI card for users who have installed Codex and run `codex login`. The local-only shim exposes an OpenAI-compatible endpoint on `127.0.0.1:3457`, never reads or stores Codex OAuth tokens, and runs Codex in read-only mode. This is an optional convenience path; API-key and local OpenAI-compatible providers remain the default stable setup.
 
 ## [1.0.1] - 2026-05-19
