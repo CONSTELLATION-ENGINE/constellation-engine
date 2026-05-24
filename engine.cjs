@@ -3223,7 +3223,10 @@ Cosine similarity: ${cosSim.toFixed(3)}`;
    * Apply FUSE: add supersedes edge, penalize old node, transfer edges.
    */
   _applyFuse(newNodeId, oldNode) {
+    let shouldOwnTxn = false;
     try {
+      shouldOwnTxn = !this.db.inTransaction;
+      if (shouldOwnTxn) this.db.prepare('BEGIN IMMEDIATE').run();
       const now = new Date().toISOString();
       const ownerId = this._resolveOwnerStamp();
 
@@ -3299,7 +3302,9 @@ Cosine similarity: ${cosSim.toFixed(3)}`;
       `).run(oldNode.id);
 
       this._adjCacheVersion++;
+      if (shouldOwnTxn) this.db.prepare('COMMIT').run();
     } catch (err) {
+      try { if (shouldOwnTxn && this.db.inTransaction) this.db.prepare('ROLLBACK').run(); } catch {}
       console.warn(`[Consolidation] FUSE apply failed:`, err.message);
     }
   }
@@ -3308,7 +3313,10 @@ Cosine similarity: ${cosSim.toFixed(3)}`;
    * Apply SUPERSEDE: add supersedes edge and penalize old node.
    */
   _applySupersede(newNodeId, oldNodeId) {
+    let shouldOwnTxn = false;
     try {
+      shouldOwnTxn = !this.db.inTransaction;
+      if (shouldOwnTxn) this.db.prepare('BEGIN IMMEDIATE').run();
       const now = new Date().toISOString();
       const ownerId = this._resolveOwnerStamp();
       this.db.prepare(`
@@ -3360,7 +3368,9 @@ Cosine similarity: ${cosSim.toFixed(3)}`;
       `).run(oldNodeId);
 
       this._adjCacheVersion++;
+      if (shouldOwnTxn) this.db.prepare('COMMIT').run();
     } catch (err) {
+      try { if (shouldOwnTxn && this.db.inTransaction) this.db.prepare('ROLLBACK').run(); } catch {}
       console.warn(`[Consolidation] SUPERSEDE apply failed:`, err.message);
     }
   }

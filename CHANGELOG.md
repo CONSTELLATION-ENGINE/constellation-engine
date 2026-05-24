@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Consolidation apply paths are transaction-safe** (`engine.cjs`): `_applyFuse()` and `_applySupersede()` now wrap their multi-step node/edge updates in `BEGIN IMMEDIATE` / `COMMIT`, with rollback on failure. This prevents shutdowns, restarts, or thrown errors during consolidation from leaving a logically half-applied merge/supersede operation.
+
 ## [1.0.2] - 2026-05-24
 
 Hotfix release for Codex-compatible providers, optional Codex OAuth setup, semantic anchor embeddings, and packaged launcher polish.
