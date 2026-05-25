@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// constellation.db handle for mimir-js. Opened read-write so future v1.1
+// constellation.db handle for mimir-js. Opened read-write so daemon-side
 // writers (pulse_hint_log, episodic_ingest) can land without re-plumbing.
 // Loads sqlite-vec extension so vec0 KNN works on node_embeddings.
 //

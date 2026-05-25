@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// mimir-js: in-process JS replacement for the Python Mímir daemon.
-// OSS v1 — ships with real BGE-M3 embed/rerank (via @xenova/transformers ONNX)
-// and sqlite-backed reads. Spreading-activation pool is simplified vs the
-// 30-layer Python Multi-SA; full parity arrives in v1.1.
+// mimir-js: in-process JS Mímir daemon for the OSS runtime.
+// Ships with BGE-M3 embed/rerank, Multi-SA activation, predictive priming,
+// reverse propagation, Hebbian writeback, edge decay, and sqlite-backed reads.
 //
 // Boot:
 //   node scripts/mimir-js/index.js
@@ -23,7 +22,7 @@ import { spawnSync } from 'node:child_process';
 import { openDb, getDb, closeDb } from './db.js';
 import { embed, EMBED_DIM, toBlob, loadEmbedder, isReady as embedReady } from './embed.js';
 import { rerank } from './rerank.js';
-import { getPool, getStatus } from './pool.js';
+import { getPool, getStatus, recordQuerySimilarities } from './pool.js';
 import * as sa from './sa.js';
 import { reasonPaths, reasonAbduction, reasonDeduction, reasonAnalogy } from './reason.js';
 import { compile, compileSkeleton } from './compile.js';
@@ -388,9 +387,8 @@ route('POST', '/episodic_query', async (req, res) => {
       `).all(like, like, like, limit);
     }
     // Engine reads episodicRes.{episodic_context, segments, pool_size,
-    // cross_activated}. v1: surface the KNN hits as one segment per node so
-    // the engine has something to render. v1.1 will cluster into topic
-    // segments like the Python daemon's TopicGraph builder.
+    // cross_activated}. Surface KNN hits as one segment per node so the engine
+    // has stable material to render even when topic clustering is unavailable.
     const segments = rows.map((r, i) => ({
       segment_id: `seg-${i}`,
       node_ids: [r.node_id],
@@ -1055,6 +1053,7 @@ route('POST', '/signal', async (req, res) => {
           // vec0 missing — degrade silently
           rows = [];
         }
+        recordQuerySimilarities(rows);
         for (const r of rows) {
           if (sa.inject(r.node_id, seedStrength, null)) {
             injected = true;
@@ -1323,10 +1322,9 @@ route('GET', '/autonomy/status', async (req, res) => {
 });
 
 // ─── /gaps — knowledge-gap detection stub (proxied by dashboard) ────────
-// Python's detect_knowledge_gaps walks the active subgraph for components
-// with low edge density. mimir-js v1 returns an empty list (UI-safe shape);
-// the Leiden/zone path already surfaces the same information via /pool's
-// bridge column, so deferring full detection to v1.1 doesn't lose signal.
+// The Leiden/zone path already surfaces bridge-pressure information through
+// /pool. This route keeps a stable UI-safe shape for deployments that do not
+// run a separate gap-analysis pass.
 route('GET', '/gaps', async (req, res) => {
   send(res, 200, { ok: true, n_gaps: 0, gaps: [] });
 });

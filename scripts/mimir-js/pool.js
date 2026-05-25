@@ -3,6 +3,7 @@
 //
 //   raw_score = POOL_W_FAST · delta + POOL_W_SLOW · A_slow
 //             + POOL_W_MASS · mass + POOL_W_BRIDGE · bridge
+//             + query_cosine_bonus
 //
 // Then per-type multiplier, superseded penalty, noise penalty, imported
 // soft-suppression. Activation comes from sa.js Multi-SA tick; zones +
@@ -28,6 +29,9 @@ const POOL_W_BRIDGE = 0.05;
 const POOL_NOISE_PENALTY = 0.15;
 const IMPORT_SUPPRESS_MULTIPLIER = 0.40;
 const IMPORT_SUPPRESS_PROMOTE_THRESHOLD = 5;
+const POOL_COSINE_BONUS_ALPHA = 0.30;
+const POOL_COSINE_BONUS_GATE = 0.40;
+const QUERY_SIM_TTL_MS = 5 * 60 * 1000;
 
 // Per-type multiplier (Python POOL_TYPE_MULTIPLIER, mimir_daemon.py:382).
 // Lower = pool prefers; higher = pool boosts. Defaults to 1.0 for unknown.
@@ -44,6 +48,29 @@ const TYPE_MULTIPLIER = {
 const NOISE_TYPES = new Set(['draft', 'fragment', 'scratch']);
 
 let _tick = 0;
+let _lastQuerySims = null;
+let _lastQuerySimsAt = 0;
+
+export function recordQuerySimilarities(rows = []) {
+  const sims = new Map();
+  for (const row of rows) {
+    const id = row.node_id || row.id;
+    if (!id) continue;
+    const dist = Number(row.distance);
+    if (!Number.isFinite(dist)) continue;
+    const cosine = Math.max(-1, Math.min(1, 1 - (dist * dist) / 2));
+    sims.set(id, cosine);
+  }
+  _lastQuerySims = sims;
+  _lastQuerySimsAt = Date.now();
+}
+
+function getQueryCosineBonus(nodeId) {
+  if (!_lastQuerySims || (Date.now() - _lastQuerySimsAt) > QUERY_SIM_TTL_MS) return 0;
+  const cosine = _lastQuerySims.get(nodeId);
+  if (!Number.isFinite(cosine)) return 0;
+  return POOL_COSINE_BONUS_ALPHA * Math.max(0, cosine - POOL_COSINE_BONUS_GATE);
+}
 
 // Bumped by the heartbeat loop so the dashboard's tick counter advances at
 // heartbeat cadence (5s) instead of only when /pool is polled (30s). Without
@@ -131,8 +158,6 @@ export function getPool({ size = DEFAULT_POOL_SIZE } = {}) {
               + POOL_W_MASS * mass
               + POOL_W_BRIDGE * bridge;
 
-    const score_raw = score;
-
     // Type multiplier
     score *= (TYPE_MULTIPLIER[r.node_type] ?? 1.0);
 
@@ -141,6 +166,10 @@ export function getPool({ size = DEFAULT_POOL_SIZE } = {}) {
 
     // Imported soft-suppression
     if (isImportedUnpromoted(r)) score *= IMPORT_SUPPRESS_MULTIPLIER;
+
+    const query_cosine_bonus = perms.has(r.id) ? 0 : getQueryCosineBonus(r.id);
+    score += query_cosine_bonus;
+    const score_raw = score;
 
     const node = {
       id: r.id,
@@ -153,6 +182,7 @@ export function getPool({ size = DEFAULT_POOL_SIZE } = {}) {
       activation, activation_slow,
       baseline, delta,
       mass, bridge, zone, sa_channel,
+      query_cosine_bonus,
       permanent: perms.has(r.id),
     };
     if (node.permanent) permNodes.push(node);
@@ -181,6 +211,7 @@ export function getPool({ size = DEFAULT_POOL_SIZE } = {}) {
     llm_inject_limit: DEFAULT_LLM_INJECT_LIMIT,
     perm_count: permNodes.length,
     dyn_count: dynKept.length,
+    query_bonus_active: !!(_lastQuerySims && (Date.now() - _lastQuerySimsAt) <= QUERY_SIM_TTL_MS),
   };
 }
 
