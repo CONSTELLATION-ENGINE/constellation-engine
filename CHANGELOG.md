@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Restart resume handoff now carries progress context** (`src/restart-resume.js`, `src/telegram.js`): restart auto-continuation now uses a shared handoff builder that includes the interrupted turn, tool ledger, persisted tool results, and the most recent assistant progress summaries from the same session. This reduces post-restart loops where the agent sees only the original user message and repeats completed diagnosis instead of continuing from the last visible step.
 - **Consolidation apply paths are transaction-safe** (`engine.cjs`): `_applyFuse()` and `_applySupersede()` now wrap their multi-step node/edge updates in `BEGIN IMMEDIATE` / `COMMIT`, with rollback on failure. This prevents shutdowns, restarts, or thrown errors during consolidation from leaving a logically half-applied merge/supersede operation.
 
 ## [1.0.2] - 2026-05-24

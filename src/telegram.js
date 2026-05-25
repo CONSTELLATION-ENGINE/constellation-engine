@@ -34,6 +34,14 @@ import { createHash } from 'node:crypto';
 import { writeFileSync, appendFileSync, mkdirSync, existsSync, readdirSync, statSync, unlinkSync } from 'node:fs';
 import { join, resolve as pathResolve } from 'node:path';
 import { computeArousal, roundArousal } from './arousal-detector.js';
+import {
+  buildContinuationMessage,
+  buildRestartHandoffCapsule,
+  cleanupStaleInterruptedTurns,
+  findInterruptedTurn,
+  hasRecentResume,
+  markTurnFailedForRestart,
+} from './restart-resume.js';
 
 const MIMIR_URL = process.env.MIMIR_URL || 'http://127.0.0.1:18810';
 
@@ -2406,29 +2414,13 @@ export class TelegramBot extends EventEmitter {
             // turn_journal so 'tg:%' would resurrect another bot's interrupted
             // turn under our credentials. allowedUserId is this bot's owner.
             const ownerSessionPrefix = `tg:${this.#config.allowedUserId}%`;
-            const interruptedTurn = db.prepare(
-              `SELECT id, session_id, user_message, trigger FROM turn_journal t1
-               WHERE status IN ('started', 'interrupted') AND user_message IS NOT NULL
-               AND session_id LIKE ?
-               AND trigger NOT IN ('mimir_autonomous', 'restart_resume')
-               AND COALESCE(updated_at, created_at) > datetime('now', '-20 minutes')
-               AND NOT EXISTS (
-                 SELECT 1 FROM turn_journal t2
-                 WHERE t2.session_id = t1.session_id
-                   AND t2.id != t1.id
-                   AND t2.status IN ('completed', 'failed', 'interrupted', 'stale')
-                   AND t2.created_at > t1.created_at
-               )
-               ORDER BY COALESCE(updated_at, created_at) DESC LIMIT 1`
-            ).get(ownerSessionPrefix);
+            const interruptedTurn = findInterruptedTurn(db, { sessionLike: ownerSessionPrefix });
+            const restartHandoffCapsule = interruptedTurn
+              ? buildRestartHandoffCapsule(db, interruptedTurn)
+              : '';
 
             // Check if a restart_resume already ran recently (dedup guard — any status)
-            const recentResume = db.prepare(
-              `SELECT id FROM turn_journal
-               WHERE trigger='restart_resume'
-               AND created_at > datetime('now', '-3 minutes')
-               LIMIT 1`
-            ).get();
+            const recentResume = hasRecentResume(db);
 
             if (recentResume) {
               console.log('  [Auto-resume] Skipped — recent restart_resume already exists (dedup)');
@@ -2461,11 +2453,8 @@ export class TelegramBot extends EventEmitter {
               let dbCleanup;
               try {
                 dbCleanup = new Database(dbPath);
-                const cleaned = dbCleanup.prepare(
-                  `UPDATE turn_journal SET status='stale', error='cleanup_on_boot', finished_at=datetime('now'), updated_at=datetime('now')
-                   WHERE status IN ('started', 'interrupted') AND created_at < datetime('now', '-1 hour')`
-                ).run();
-                if (cleaned.changes > 0) console.log(`  🧹 Cleaned ${cleaned.changes} stale turn_journal entries (not resumed)`);
+                const cleaned = cleanupStaleInterruptedTurns(dbCleanup, { olderThanMinutes: 60 });
+                if (cleaned > 0) console.log(`  🧹 Cleaned ${cleaned} stale turn_journal entries (not resumed)`);
               } catch {} finally { try { dbCleanup?.close(); } catch {} }
             }
 
@@ -2487,9 +2476,7 @@ export class TelegramBot extends EventEmitter {
                 let dbWrite;
                 try {
                   dbWrite = new Database(dbPath);
-                  dbWrite.prepare(
-                    `UPDATE turn_journal SET status='failed', error='engine_restart', finished_at=datetime('now'), updated_at=datetime('now') WHERE id=?`
-                  ).run(interruptedTurn.id);
+                  markTurnFailedForRestart(dbWrite, interruptedTurn.id);
                 } catch {} finally { try { dbWrite?.close(); } catch {} }
               }
 
@@ -2498,7 +2485,7 @@ export class TelegramBot extends EventEmitter {
 
               // Send a continuation message instead of replaying the exact user message
               // This prevents loops (e.g., if the user message was "restart the engine")
-              const continuationMessage = `[System auto-continuation] The engine just finished restarting. The message you were replying to before the restart was:\n"${resumeUserMessage}"\nPlease continue replying to it.`;
+              const continuationMessage = buildContinuationMessage(resumeUserMessage, restartHandoffCapsule);
 
               // Wait 10s for all services (proxy, Mímir, DB) to fully stabilize
               setTimeout(async () => {
