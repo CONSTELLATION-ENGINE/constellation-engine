@@ -8,9 +8,10 @@ In the internal Constellation Engine workflow, this file is injected automatical
 
 1. Confirm the release scope from the diff since the previous tag.
 2. Confirm `CHANGELOG.md` `[Unreleased]` contains every OSS-shippable fix in the batch.
-3. Run a sensitive-term/token scan before packaging.
-4. Confirm package versions are still on the previous version before the bump, then bump both root and Electron package versions together.
-5. Run release checks. If a check is skipped or known-bad, record the exact reason in the release summary.
+3. Run an English-only audit for OSS changes: code comments, user-facing strings, prompts, docs, changelog entries, and release notes must not introduce Chinese text.
+4. Run a sensitive-term/token scan before packaging.
+5. Confirm package versions are still on the previous version before the bump, then bump both root and Electron package versions together.
+6. Run release checks. If a check is skipped or known-bad, record the exact reason in the release summary.
 
 ## Release Steps
 
