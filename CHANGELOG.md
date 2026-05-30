@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-05-30
+
 ### Fixed
 - **Resolver canary no longer auto-starts on boot** (`src/main.js`, `src/mimir-resolver.js`, `constellation.db`): synthetic `resolver_canary` heartbeat telemetry is now an explicit diagnostic path only. This prevents fake resolver traffic from confusing health panels and avoids any opt-in canary node path from surfacing user-visible `resolver-canary-*` memory noise by default. The sample star map also demotes the existing canary node to `dormant`.
 - **Mímir JS pool now applies query-aware relevance scoring** (`scripts/mimir-js/index.js`, `scripts/mimir-js/pool.js`): `/signal` text KNN results are cached as short-lived query similarities, and `/pool` adds the same gated cosine relevance bonus used by the Python daemon. Query-relevant nodes now rise during first-stage pool scoring instead of relying only on later rerank filtering. Removed stale parity-disclaimer comments that understated the shipped OSS Mímir runtime.
