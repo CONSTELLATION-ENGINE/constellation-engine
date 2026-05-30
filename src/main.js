@@ -1353,10 +1353,10 @@ Files: ${result.matchedFiles.join(', ')}` : '';
       // Pass resolver into ToolManager so constellation_remember (diary path)
       // gets shadow audit too.
       try { tools.setResolver(mimirResolver); } catch {}
-      // Start canary if not off-mode
-      if (_mode !== 'off') {
-        try { mimirResolver.startCanary({ ownerId: 'self' }); } catch {}
-      }
+      // Resolver canary is intentionally not auto-started. Synthetic heartbeat
+      // telemetry can look like real resolver traffic and older canary node
+      // writes polluted the user-visible star map. Keep startCanary() as an
+      // explicit diagnostic entry only.
     }
   } catch (e) {
     console.warn(`  ⚠ MimirResolver init failed: ${e.message} (non-critical)`);

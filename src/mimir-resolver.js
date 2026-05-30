@@ -435,12 +435,13 @@ Reply with exactly one word: INSERT | REVISE | CONSOLIDATE | SKIP`;
   }
 
   /**
-   * Hourly canary: write a fixed-content `subkind='resolver_canary'` candidate.
-   * After hour 1 the resolver should overwhelmingly choose SKIP (because the
-   * canary node is already in the graph). If SKIP rate < 80%, alarm fires.
+   * Explicit diagnostic canary: submit a fixed-content
+   * `subkind='resolver_canary'` candidate through resolver audit only.
    *
-   * Default OFF — enable when MIMIR_RESOLVER_MODE != 'off' so off-mode user
-   * don't accumulate canary nodes.
+   * This is not auto-started from main.js. Synthetic heartbeat telemetry can
+   * look like real resolver traffic, and older canary node writes polluted the
+   * user-visible star map. Node writes remain opt-in via
+   * MIMIR_RESOLVER_CANARY_NODES=1 for rare forensic diagnostics.
    */
   #canaryTimer = null;
   startCanary({ intervalMs = 3600_000, ownerId = 'self' } = {}) {
