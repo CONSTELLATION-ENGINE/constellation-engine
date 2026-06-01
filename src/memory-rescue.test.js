@@ -6,7 +6,10 @@ import {
   extractMemoryRescueTerms,
   renderMemoryRescueSection,
   scoreMemoryRescueTrigger,
+  starMemoryRescueCandidates,
 } from './memory-rescue.js';
+
+import Database from 'better-sqlite3';
 
 test('memory rescue trigger fires on named entity plus weak recall', () => {
   const result = scoreMemoryRescueTrigger({
@@ -112,4 +115,66 @@ test('memory rescue render drops low-relevance selected candidates', () => {
   assert.ok(section.text.includes('Star:direct-node'));
   assert.equal(section.text.includes('Star:adjacent-node'), false);
   assert.equal(section.selectedCount, 1);
+});
+
+test('memory rescue star candidates exclude superseded nodes', () => {
+  const db = new Database(':memory:');
+  db.exec(`
+    CREATE TABLE nodes (
+      id TEXT PRIMARY KEY,
+      state TEXT DEFAULT 'active',
+      deprecated_at TEXT,
+      superseded_at TEXT,
+      superseded_by TEXT,
+      node_type TEXT,
+      subkind TEXT,
+      created_at TEXT,
+      updated_at TEXT,
+      access_count INTEGER DEFAULT 0,
+      conn_count INTEGER DEFAULT 0,
+      l0 TEXT,
+      l1 TEXT,
+      l2 TEXT,
+      tags TEXT
+    )
+  `);
+  const insert = db.prepare(`
+    INSERT INTO nodes (id, state, deprecated_at, superseded_at, superseded_by, node_type, subkind, l0, l1, l2, tags)
+    VALUES (@id, @state, @deprecated_at, @superseded_at, @superseded_by, @node_type, @subkind, @l0, @l1, @l2, @tags)
+  `);
+  insert.run({
+    id: 'polanyi-old-memory',
+    state: 'active',
+    deprecated_at: null,
+    superseded_at: '2026-06-01T00:00:00Z',
+    superseded_by: 'polanyi-new-memory',
+    node_type: 'knowledge',
+    subkind: 'theory',
+    l0: 'Polanyi obsolete interpretation',
+    l1: 'Old Polanyi reading that has been superseded.',
+    l2: '',
+    tags: '["Polanyi"]',
+  });
+  insert.run({
+    id: 'polanyi-new-memory',
+    state: 'active',
+    deprecated_at: null,
+    superseded_at: null,
+    superseded_by: null,
+    node_type: 'knowledge',
+    subkind: 'theory',
+    l0: 'Polanyi current interpretation',
+    l1: 'Current Polanyi reading that should be rescued.',
+    l2: '',
+    tags: '["Polanyi"]',
+  });
+
+  const rows = starMemoryRescueCandidates(db, {
+    query: 'Polanyi interpretation',
+    terms: ['Polanyi'],
+  });
+  db.close();
+
+  assert.equal(rows.some(row => row.id === 'polanyi-old-memory'), false);
+  assert.equal(rows.some(row => row.id === 'polanyi-new-memory'), true);
 });

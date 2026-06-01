@@ -189,7 +189,7 @@ export function starMemoryRescueCandidates(db, {
     const direct = db.prepare(`
       SELECT id, node_type, subkind, created_at, updated_at, access_count, conn_count, l0, l1, l2, tags
       FROM nodes
-      WHERE state='active' AND deprecated_at IS NULL AND (${directWhere})${ownerSql}
+      WHERE state='active' AND deprecated_at IS NULL AND superseded_at IS NULL AND (${directWhere})${ownerSql}
       LIMIT 80
     `).all(...params, ...ownerParams);
     for (const row of direct) {
@@ -205,7 +205,7 @@ export function starMemoryRescueCandidates(db, {
     const broad = db.prepare(`
       SELECT id, node_type, subkind, created_at, updated_at, access_count, conn_count, l0, l1, l2, tags
       FROM nodes
-      WHERE state='active' AND deprecated_at IS NULL AND (${broadWhere})${ownerSql}
+      WHERE state='active' AND deprecated_at IS NULL AND superseded_at IS NULL AND (${broadWhere})${ownerSql}
       LIMIT 100
     `).all(...params, ...ownerParams);
     for (const row of broad) {
@@ -314,6 +314,7 @@ ${JSON.stringify(convItems, null, 2)}
 
 Rules:
 - Prefer direct matches over adjacent background.
+- Treat outdated, deprecated, or superseded memories as noise unless a newer replacement is also selected.
 - If a candidate only shares generic words, mark it noise.
 - Only select candidates with relevance >= 0.55.
 - Put low-relevance or merely adjacent candidates in noise_keys instead of selected.
