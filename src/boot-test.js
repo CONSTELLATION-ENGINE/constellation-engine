@@ -51,8 +51,13 @@ async function test() {
 
   // 5. LLMRouter (just instantiate, no actual call)
   console.log('  [5] LLMRouter...');
-  const llm = new LLMRouter(config.llm);
-  console.log(`      ✅ Router ready (${config.llm.primaryModel})`);
+  const bootTestLlmConfig = {
+    ...config.llm,
+    primaryModel: config.llm.primaryModel || 'boot-test-placeholder-model',
+    compactModel: config.llm.compactModel || config.llm.primaryModel || 'boot-test-placeholder-model',
+  };
+  const llm = new LLMRouter(bootTestLlmConfig);
+  console.log(`      ✅ Router ready (${bootTestLlmConfig.primaryModel})`);
 
   // 6. AgentRuntime
   console.log('  [6] AgentRuntime...');

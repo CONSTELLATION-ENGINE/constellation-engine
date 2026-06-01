@@ -173,10 +173,9 @@
       "pattern": "soul[-_]core",
       "scope": [
         "identity/SYSTEM_PREAMBLE.template.md",
-        "identity/ENGINE-GUIDE.md",
         "identity/SETUP.md"
       ],
-      "reason": "soul-core KC concept must be preserved in core identity docs (plan §4.2). Per-file scope, not glob, so unrelated identity .md files don't trigger false positives."
+      "reason": "soul-core KC concept must be preserved in user-facing identity setup docs (plan §4.2). ENGINE-GUIDE.md is a generic mechanism guide and should not be coupled to identity seed wording."
     }
   ],
   "oss_only_paths": [
