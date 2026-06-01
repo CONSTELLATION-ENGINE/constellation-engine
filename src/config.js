@@ -100,12 +100,16 @@ const DEFAULTS = {
       pool_anchor: { enabled: true },
       raw_context: {
         enabled: true,
+        mode: 'recovery_only',
         min_turns: 20,
         min_hours: 4,
-        max_turns: 80,
+        max_turns: 20,
         expanded_hours: 8,
-        expanded_max_turns: 120,
+        expanded_max_turns: 40,
         tight_episodic_max_turns: 40,
+      },
+      compaction_summary: {
+        inject: false,
       },
     },
     star_map: {

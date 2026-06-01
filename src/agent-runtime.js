@@ -2919,9 +2919,9 @@ export class AgentRuntime extends EventEmitter {
         }
       }
 
-      // Recent raw messages — always inject alongside episodic for full fidelity.
-      // Episodic gives semantic breadth; raw messages give verbatim recent detail
-      // (critical for code work continuity after timeouts/restarts).
+      // Recent raw messages are recovery-only by default.
+      // Episodic/star-map recall gives semantic breadth; raw verbatim is only
+      // expanded after detected compaction/resume or when explicitly enabled.
       //
       // Window: hybrid max(MIN_TURNS, MIN_HOURS) with MAX_TURNS cap. The cap
       // adapts on a clear rerank signal only — when episodic top-score is high
@@ -2933,12 +2933,12 @@ export class AgentRuntime extends EventEmitter {
           const now = new Date();
           const MIN_HOURS = typeof _irRaw.min_hours === 'number' ? _irRaw.min_hours : 4;
           const MIN_TURNS = typeof _irRaw.min_turns === 'number' ? _irRaw.min_turns : 20;
-          const MAX_TURNS_DEFAULT = typeof _irRaw.max_turns === 'number' ? _irRaw.max_turns : 80;
+          const MAX_TURNS_DEFAULT = typeof _irRaw.max_turns === 'number' ? _irRaw.max_turns : 20;
           const TIGHT_MAX_TURNS = typeof _irRaw.tight_episodic_max_turns === 'number'
             ? _irRaw.tight_episodic_max_turns
             : 40;
 
-          // Adaptive window: compaction triggers 8h window for 12h cooldown
+          // Adaptive window: compaction triggers a recovery window for 12h cooldown.
           let adaptiveWindow = this.#session.getAdaptiveWindow(sessionId);
 
           // Silent-compaction detection: if the prior turn for this session
@@ -2964,27 +2964,52 @@ export class AgentRuntime extends EventEmitter {
             }
           } catch { /* never let detection break a turn */ }
 
-          const ADAPTIVE_MAX_TURNS = adaptiveWindow.maxTurns; // 120 if expanded, 80 if default
-          const ADAPTIVE_MAX_HOURS = adaptiveWindow.hours; // 8 if expanded, 4 if default
+          const rawMode = String(_irRaw.mode || (_irRaw.recovery_only ? 'recovery_only' : 'always')).toLowerCase();
+          const recoveryOnly = rawMode === 'recovery_only' || rawMode === 'compaction_only';
+          const rawRecoveryActive = adaptiveWindow.isExpandedWindow && adaptiveWindow.reason === 'compaction';
+          const rawPolicyBody =
+            `## 📋 Raw Recent Recovery Policy\n` +
+            `Raw recent conversation is not injected by default. If exact prior wording or the last N turns are needed, use \`conversation_fetch_raw\` or ask for targeted raw recall; after compaction, a bounded 20-40 turn recovery window opens automatically.`;
 
-          let MAX_TURNS = ADAPTIVE_MAX_TURNS;
-          const ep = _injectionStats.episodic;
-          if (ep && Array.isArray(ep.top5_rerank) && ep.top5_rerank.length >= 3) {
-            const [r1, r2, r3] = ep.top5_rerank;
-            const tight = (r1 - r3) < 0.6; // top-3 cluster tight → strong signal
-            if (r1 >= 1.5 && tight) MAX_TURNS = TIGHT_MAX_TURNS;
-          }
-
-          // Record in stats for monitoring
-          if (!_injectionStats.adaptiveWindow) {
-            _injectionStats.adaptiveWindow = {
-              isExpanded: adaptiveWindow.isExpandedWindow,
-              hours: adaptiveWindow.hours,
-              maxTurns: ADAPTIVE_MAX_TURNS,
-              reason: adaptiveWindow.reason || 'default',
-              compaction_triggered_window_8h: adaptiveWindow.isExpandedWindow,
+          if (recoveryOnly && !rawRecoveryActive) {
+            dynamicSections.push(rawPolicyBody);
+            _injectionStats.raw = {
+              turns: 0,
+              chars: 0,
+              skipped: 'recovery_only_no_compaction',
+              mode: rawMode,
             };
-          }
+            if (!_injectionStats.adaptiveWindow) {
+              _injectionStats.adaptiveWindow = {
+                isExpanded: adaptiveWindow.isExpandedWindow,
+                hours: adaptiveWindow.hours,
+                maxTurns: adaptiveWindow.maxTurns,
+                reason: adaptiveWindow.reason || 'default',
+                compaction_triggered_window: rawRecoveryActive,
+              };
+            }
+          } else {
+            const ADAPTIVE_MAX_TURNS = adaptiveWindow.maxTurns;
+            const ADAPTIVE_MAX_HOURS = adaptiveWindow.hours;
+
+            let MAX_TURNS = ADAPTIVE_MAX_TURNS;
+            const ep = _injectionStats.episodic;
+            if (ep && Array.isArray(ep.top5_rerank) && ep.top5_rerank.length >= 3) {
+              const [r1, r2, r3] = ep.top5_rerank;
+              const tight = (r1 - r3) < 0.6; // top-3 cluster tight → strong signal
+              if (r1 >= 1.5 && tight) MAX_TURNS = TIGHT_MAX_TURNS;
+            }
+
+            // Record in stats for monitoring
+            if (!_injectionStats.adaptiveWindow) {
+              _injectionStats.adaptiveWindow = {
+                isExpanded: adaptiveWindow.isExpandedWindow,
+                hours: adaptiveWindow.hours,
+                maxTurns: ADAPTIVE_MAX_TURNS,
+                reason: adaptiveWindow.reason || 'default',
+                compaction_triggered_window: rawRecoveryActive,
+              };
+            }
 
           // Cast a 24h net; we'll trim by whichever of (last MIN_TURNS turns) / (last ADAPTIVE_MAX_HOURS h) is larger.
           const netCutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -3044,12 +3069,20 @@ export class AgentRuntime extends EventEmitter {
               span_min: spanMins,
               chars: rawBody.length,
               max_turns_cap: MAX_TURNS,
-              adaptive: MAX_TURNS === 40 ? 'tight_episodic' : 'default',
+              adaptive: MAX_TURNS === TIGHT_MAX_TURNS ? 'tight_episodic' : 'default',
+              mode: rawMode,
+              compaction_triggered_window: rawRecoveryActive,
             };
+          }
           }
         } catch (err) {
           console.warn(`  ⚠ Raw recent injection failed: ${err.message || err}`);
         }
+      } else {
+        dynamicSections.push(
+          `## 📋 Raw Recent Recovery Policy\n` +
+          `Raw recent conversation is not injected by default. If exact prior wording or the last N turns are needed, use \`conversation_fetch_raw\` or ask for targeted raw recall; after compaction, a bounded 20-40 turn recovery window opens automatically.`
+        );
       }
 
       // ─── Emit one PII-safe injection-log record per turn ──
@@ -3174,10 +3207,13 @@ export class AgentRuntime extends EventEmitter {
     }
 
     // ─── Layer 4: Compaction summary ─────────────────────────────
+    const _summaryCfg = _irCfg.compaction_summary || {};
     const summary = this.#session.getSummary(sessionId);
-    if (summary) {
+    if (summary && _summaryCfg.inject === true) {
       const trimmedSummary = this.#trimToTokenBudget(summary, summaryBudget);
       dynamicSections.push(`## Conversation Summary (compacted)\n\n${trimmedSummary}`);
+    } else if (summary) {
+      _recordLayer('compacted_summary', 'session_compaction_stored_not_injected', 0);
     }
 
     // ─── Layer 5: Extra context ──────────────────────────────────

@@ -70,7 +70,7 @@ function detectLang(s) {
  * @param {Object} [rec.poolAnchor]       - {segments, chars}
  * @param {Object} [rec.autoExpand]       - {seg_id, top_rerank, margin, chars, msgs?, truncated?, skipped?}
  * @param {Object} [rec.raw]              - {turns, span_min, chars, mode}
- * @param {Object} [rec.adaptiveWindow]   - {isExpanded, hours, maxTurns, compaction_triggered_window_8h}
+ * @param {Object} [rec.adaptiveWindow]   - {isExpanded, hours, maxTurns, reason, compaction_triggered_window}
  * @param {number[]} [rec.segment_ids_fetched] - seg IDs fetched via conversation_fetch_raw this turn
  * @param {number} [rec.totalChars]       - total injected char count
  * @param {number} [rec.latencyMs]        - total pipeline latency if known
