@@ -71,6 +71,7 @@ function detectLang(s) {
  * @param {Object} [rec.autoExpand]       - {seg_id, top_rerank, margin, chars, msgs?, truncated?, skipped?}
  * @param {Object} [rec.raw]              - {turns, span_min, chars, mode}
  * @param {Object} [rec.adaptiveWindow]   - {isExpanded, hours, maxTurns, reason, compaction_triggered_window}
+ * @param {Object} [rec.memoryRescue]     - {trigger_score, reasons, candidates, selected, quality, chars}
  * @param {number[]} [rec.segment_ids_fetched] - seg IDs fetched via conversation_fetch_raw this turn
  * @param {number} [rec.totalChars]       - total injected char count
  * @param {number} [rec.latencyMs]        - total pipeline latency if known
@@ -90,6 +91,7 @@ export function logInjection(rec) {
       auto_expand: rec.autoExpand || null,
       raw: rec.raw || null,
       adaptive_window: rec.adaptiveWindow || null,
+      memory_rescue: rec.memoryRescue || null,
       segment_ids_fetched: Array.isArray(rec.segment_ids_fetched) && rec.segment_ids_fetched.length > 0
         ? rec.segment_ids_fetched
         : null,

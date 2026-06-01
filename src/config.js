@@ -98,6 +98,15 @@ const DEFAULTS = {
       episodic: { enabled: true, rerank_min: 0.3, top_k: 5, pool_size: 10 },
       deep_recall: { enabled: true, rerank_min: 0.3, cutoff_days: 7 },
       pool_anchor: { enabled: true },
+      memory_rescue: {
+        enabled: true,
+        min_trigger_score: 3.2,
+        star_limit: 18,
+        conversation_limit: 10,
+        timeout_ms: 60000,
+        min_relevance: 0.55,
+        max_chars: 7000,
+      },
       raw_context: {
         enabled: true,
         mode: 'recovery_only',

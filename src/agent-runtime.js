@@ -49,6 +49,13 @@ import { selectPrecision, renderNode } from './narrative-ir.js';
 import { StreamingIRState } from './streaming-ir.js';
 import { deriveCurrentUser, OWNER_USER_ID, OWNER_SPEAKER_ID, runWithIdentity, enforceOwnerIdentity } from './user-identity.js';
 import { logInjection } from './injection-log.js';
+import {
+  conversationMemoryRescueCandidates,
+  renderMemoryRescueSection,
+  runMemoryRescueJudge,
+  scoreMemoryRescueTrigger,
+  starMemoryRescueCandidates,
+} from './memory-rescue.js';
 
 // ─── Mímir daemon URL (centralized) ─────────────────────────────────────────
 const MIMIR_URL = process.env.MIMIR_URL || 'http://127.0.0.1:18810';
@@ -1139,6 +1146,23 @@ export class AgentRuntime extends EventEmitter {
 
     const stableSections = [];
     const dynamicSections = [];
+    const _injectionStats = { episodic: null, deepRecall: null, poolAnchor: null, raw: null, layers: {} };
+    const _recordLayer = (name, source, chars) => {
+      if (!name || !chars) return;
+      _injectionStats.layers[name] = { source: source || 'unknown', chars };
+    };
+    const _memoryRescueLog = (message, extra = {}) => {
+      try {
+        const parts = [`[Anamnesis/MemoryRescue] turn=${sessionId}`];
+        if (message) parts.push(message);
+        for (const [key, value] of Object.entries(extra || {})) {
+          if (value === undefined || value === null || value === '') continue;
+          const rendered = Array.isArray(value) ? value.join('+') : String(value);
+          parts.push(`${key}=${rendered.slice(0, 180)}`);
+        }
+        console.log(parts.join(' '));
+      } catch {}
+    };
 
     // ─── Layer 1: Fixed files ─────────────────────────────────────
     const fixedContent = this.#loadFixedFiles(fixedBudget);
@@ -2124,6 +2148,156 @@ export class AgentRuntime extends EventEmitter {
             .filter(n => !n.permanent)
             .slice(0, 8)
             .map(n => n.id);
+
+          // ── Anamnesis Memory Rescue (second-pass, gated) ─────────────
+          // First-pass IR remains Mímir / Star Map / Episodic. This layer
+          // fires only when multiple signals suggest the first pass missed a
+          // concrete memory: recall intent, named/technical entity, weak
+          // episodic result, pool fallback, or pool/entity mismatch.
+          const _rescueCfg = this.#irConfig?.memory_rescue || {};
+          if (
+            _rescueCfg.enabled !== false
+            && !_isMimirTrigger
+            && !_isCronTurn
+            && userMessage
+            && userMessage.length >= 10
+            && this.#engine?.db
+          ) {
+            try {
+              const topPoolIds = poolNodes.filter(n => !n.permanent).slice(0, 8).map(n => n.id);
+              const trigger = scoreMemoryRescueTrigger({
+                query: userMessage,
+                episodicStats: _injectionStats.episodic,
+                poolFallback: allDeltasLow,
+                poolDynamicCount: _dynamicNodes.length,
+                topPoolIds,
+              });
+              const minScore = typeof _rescueCfg.min_trigger_score === 'number' ? _rescueCfg.min_trigger_score : 3.2;
+              if (trigger.shouldRun && trigger.score >= minScore) {
+                const rescueStartedAt = Date.now();
+                const { sql: ownerSql, params: ownerParams } = this.#engine._ownerSqlClause();
+                const starRows = starMemoryRescueCandidates(this.#engine.db, {
+                  query: userMessage,
+                  terms: trigger.terms,
+                  ownerSql,
+                  ownerParams,
+                  limit: typeof _rescueCfg.star_limit === 'number' ? _rescueCfg.star_limit : 18,
+                });
+                const convScope = (currentUser.isSystem && OWNER_SPEAKER_ID)
+                  ? { sessionIdLike: `${OWNER_SPEAKER_ID}%` }
+                  : { sessionId: currentUser.sessionId };
+                const convRows = this.#convStore?.db
+                  ? conversationMemoryRescueCandidates(this.#convStore.db, {
+                      query: userMessage,
+                      terms: trigger.terms,
+                      ...convScope,
+                      limit: typeof _rescueCfg.conversation_limit === 'number' ? _rescueCfg.conversation_limit : 10,
+                    })
+                  : [];
+                if (starRows.length > 0 || convRows.length > 0) {
+                  _memoryRescueLog('triggered', {
+                    score: trigger.score,
+                    reasons: trigger.reasons,
+                    entities: (trigger.entities || trigger.entityTerms || []).slice(0, 8),
+                    intent: (trigger.intentPhrases || []).slice(0, 4),
+                    terms: trigger.terms.slice(0, 8),
+                    star: starRows.length,
+                    conversation: convRows.length,
+                  });
+                  const judge = await runMemoryRescueJudge({
+                    llm: this.#llm,
+                    query: userMessage,
+                    trigger,
+                    episodicStats: _injectionStats.episodic,
+                    starRows,
+                    convRows,
+                    timeoutMs: typeof _rescueCfg.timeout_ms === 'number' ? _rescueCfg.timeout_ms : 60000,
+                  });
+                  if (judge.ok) {
+                    const rendered = renderMemoryRescueSection({
+                      judge,
+                      starRows,
+                      convRows,
+                      maxChars: typeof _rescueCfg.max_chars === 'number' ? _rescueCfg.max_chars : 7000,
+                      minRelevance: typeof _rescueCfg.min_relevance === 'number' ? _rescueCfg.min_relevance : 0.55,
+                    });
+                    if (rendered.text) {
+                      dynamicSections.push(rendered.text);
+                      _recordLayer('memory_rescue', `anamnesis_judge:${trigger.reasons.join('+')}`, rendered.text.length);
+                      _injectionStats.memoryRescue = {
+                        trigger_score: trigger.score,
+                        reasons: trigger.reasons,
+                        terms: trigger.terms,
+                        entities: trigger.entities || trigger.entityTerms || [],
+                        intent_phrases: trigger.intentPhrases || [],
+                        star_candidates: starRows.length,
+                        conversation_candidates: convRows.length,
+                        selected: rendered.selectedCount,
+                        quality: rendered.quality,
+                        chars: rendered.text.length,
+                      };
+                      _memoryRescueLog('injected', {
+                        selected: rendered.selectedCount,
+                        quality: rendered.quality,
+                        chars: rendered.text.length,
+                        ms: Date.now() - rescueStartedAt,
+                      });
+                    } else {
+                      _injectionStats.memoryRescue = {
+                        trigger_score: trigger.score,
+                        reasons: trigger.reasons,
+                        star_candidates: starRows.length,
+                        conversation_candidates: convRows.length,
+                        selected: 0,
+                        skipped: 'judge_selected_none',
+                      };
+                      _memoryRescueLog('skipped', {
+                        reason: 'judge_selected_none',
+                        quality: judge.parsed?.quality,
+                        ms: Date.now() - rescueStartedAt,
+                      });
+                    }
+                  } else {
+                    _injectionStats.memoryRescue = {
+                      trigger_score: trigger.score,
+                      reasons: trigger.reasons,
+                      star_candidates: starRows.length,
+                      conversation_candidates: convRows.length,
+                      skipped: 'judge_failed',
+                      error: judge.error || judge.skipped,
+                    };
+                    _memoryRescueLog('skipped', {
+                      reason: 'judge_failed',
+                      error: judge.error || judge.skipped,
+                      ms: Date.now() - rescueStartedAt,
+                    });
+                  }
+                } else {
+                  _injectionStats.memoryRescue = {
+                    trigger_score: trigger.score,
+                    reasons: trigger.reasons,
+                    skipped: 'no_candidates',
+                  };
+                  _memoryRescueLog('skipped', {
+                    reason: 'no_candidates',
+                    score: trigger.score,
+                    reasons: trigger.reasons,
+                    ms: Date.now() - rescueStartedAt,
+                  });
+                }
+              } else {
+                _injectionStats.memoryRescue = {
+                  trigger_score: trigger.score,
+                  reasons: trigger.reasons,
+                  skipped: 'below_trigger_threshold',
+                };
+              }
+            } catch (err) {
+              console.warn(`  ⚠ Memory rescue failed (silent): ${err.message || err}`);
+              _injectionStats.memoryRescue = { skipped: 'error', error: err.message || String(err) };
+            }
+          }
+
           // Pool snapshot for JSONL observability log (top 15 final-ordered nodes).
           // poolNodes only exists in this /pool branch; fallback /state path skips.
           _irLogState.pool = poolNodes.slice(0, 15).map(n => ({
@@ -2692,7 +2866,8 @@ export class AgentRuntime extends EventEmitter {
     const _poolAnchorSegIdSet = new Set();
     // Track what actually made it into the prompt so we can emit one PII-safe
     // injection-log record at the bottom of this layer.
-    const _injectionStats = { episodic: null, deepRecall: null, poolAnchor: null, raw: null };
+    // _injectionStats is hoisted near dynamicSections so early IR layers and
+    // late episodic/raw layers write into the same observability record.
     // Reset per-turn fetch tracking — conversation_fetch_raw writes into globalThis
     // during this turn's tool round; we'll copy back into _injectionStats below.
     if (!globalThis._injectionStats) globalThis._injectionStats = {};
@@ -3091,6 +3266,7 @@ export class AgentRuntime extends EventEmitter {
           + (_injectionStats.deepRecall?.chars || 0)
           + (_injectionStats.poolAnchor?.chars || 0)
           + (_injectionStats.autoExpand?.chars || 0)
+          + (_injectionStats.memoryRescue?.chars || 0)
           + (_injectionStats.raw?.chars || 0);
         // Pull verbatim-fetch tool activity recorded during this turn's tool round
         const fetched = Array.isArray(globalThis._injectionStats?.segment_ids_fetched)
@@ -3107,6 +3283,7 @@ export class AgentRuntime extends EventEmitter {
           autoExpand: _injectionStats.autoExpand,
           raw: _injectionStats.raw,
           adaptiveWindow: _injectionStats.adaptiveWindow,
+          memoryRescue: _injectionStats.memoryRescue,
           segment_ids_fetched: _injectionStats.segment_ids_fetched,
           totalChars: total,
         });
