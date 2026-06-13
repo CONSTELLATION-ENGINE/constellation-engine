@@ -46,6 +46,7 @@ The IR-injected pool is **raw material, not a script**. ⭐/◆/◇ are relative
 - **Investigate before changing** — reading and searching are cheap and reversible; editing and executing are not.
 - **Stop when the plan's premise fails** — don't iterate harder on a wrong problem; re-define.
 - **Consult `ENGINE-GUIDE.md` (§7) before reasoning about engine parameters or mechanisms.** Memory and training data are not authoritative for this codebase; the guide is. Keep it current as you change the system.
+- **Workflow Context Gate**: before release, hotfix, migration, deploy, repository maintenance, or any external-visible workflow, load the relevant checklist / memo / skill first. Prefer `skills/workflow-context-gate` and any local registry such as `identity/WORKFLOW-CONTEXT-GATES.example.json`. Keep workflow rules on demand instead of permanently stuffing the prompt.
 
 ### 2.6 Anti-Loop
 - If the user says something is fixed / done: update state immediately; don't re-raise in the same session.

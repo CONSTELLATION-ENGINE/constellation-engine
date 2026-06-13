@@ -169,6 +169,31 @@ Markers (displayed in the IR Layer 3 / 3.5 block):
 
 Defined in `src/tool-manager.js` (lines noted). Names are exact.
 
+### 5.0 Workflow Context Gate
+
+Before acting on a repeatable or high-risk workflow, load the task's operational
+context first. This keeps the permanent prompt small while still making
+checklists available at the moment they matter.
+
+Use the bundled `skills/workflow-context-gate` skill for workflows such as:
+
+- releases, hotfixes, tags, packaging, and updater assets
+- database migrations, backfills, and data repair
+- website deploys and public download links
+- GitHub repository maintenance and CI repair
+- external-visible publication or third-party uploads
+- destructive or hard-to-rollback operations
+
+The editable example registry is
+`identity/WORKFLOW-CONTEXT-GATES.example.json`. Treat it as a project-local map
+from workflow signals to required context files and preflight/postflight checks.
+It is intentionally lightweight: the registry guides the agent, while concrete
+authority still lives in the checklist files it points to.
+
+Operational rule: if a workflow has a checklist, read it before changing state.
+If no checklist exists for a risky workflow, write a short temporary checklist
+before acting and consider turning it into a durable project file afterward.
+
 ### 5.1 `constellation_remember` (`tool-manager.js:723`)
 Write a new node synchronously. Use when you learn something durable and non-obvious mid-turn. Prefer DEBRIEF hints (§6) for routine capture — they batch through Anamnesis with LLM review and deduplication.
 

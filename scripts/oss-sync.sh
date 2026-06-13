@@ -71,9 +71,11 @@ rsync -a \
   --exclude='package.json' \
   --include='package-lock.json' \
   --include='identity/' \
+  --include='identity/WORKFLOW-CONTEXT-GATES.example.json' \
   --include='identity/*.template.md' \
   --include='identity/ENGINE-GUIDE.md' \
   --include='identity/SETUP.md' \
+  --include='skills/' --include='skills/***' \
   --include='config/' --include='config/node_taxonomy.json' \
   --exclude='*' \
   "$REPO_ROOT/" "$STAGING_DIR/" 2>/dev/null || true

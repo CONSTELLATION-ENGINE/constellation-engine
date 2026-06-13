@@ -59,6 +59,7 @@
           "prompts/**/*",
           "migrations/**/*",
           "identity/**/*",
+          "skills/**/*",
           "config/**/*",
           "node_modules/**/*",
           "LICENSE",

@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Workflow Context Gate light edition** (`skills/workflow-context-gate/SKILL.md`, `identity/WORKFLOW-CONTEXT-GATES.example.json`, `identity/ENGINE-GUIDE.md`, `identity/SYSTEM_PREAMBLE.md`, `electron/package.json`): added an OSS-safe workflow-context pattern for loading release, hotfix, migration, deploy, repository, or external-action checklists only when a task needs them. The bundled skill and editable registry example expose the operating pattern without shipping any private workflow rules, and packaged apps now include bundled skills under the engine resources directory.
+
 ### Fixed
 - **Anamnesis Memory Rescue no longer revives superseded Star Map nodes** (`src/memory-rescue.js`): Star Map rescue candidates now require `superseded_at IS NULL` in addition to active/non-deprecated state, and the judge prompt treats outdated or superseded memories as noise. This keeps the second-pass rescue path aligned with stale-memory suppression instead of letting active-but-superseded nodes re-enter prompts.
 - **Anamnesis Memory Rescue now ships as a gated second-pass recall layer** (`src/agent-runtime.js`, `src/memory-rescue.js`, `src/injection-log.js`, `src/config.js`, `config.example.json`): recall-like turns can now trigger deterministic Star Map / conversation candidate rescue plus a bounded LLM relevance judge. Low-relevance candidates are filtered before prompt injection, trigger logs surface as `[Anamnesis/MemoryRescue] ...`, and extracted log terms separate stable entities from recall-intent phrases so stdout does not treat whole user sentences as keywords.

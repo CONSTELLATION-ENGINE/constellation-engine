@@ -4,13 +4,14 @@ This folder contains the baseline identity files that Constellation Engine injec
 
 The `*.template.md` files here are **starting points**, not final versions. The first-run wizard renders them into their `*.md` siblings and fills the placeholders. You can also do it manually — fill in the placeholders, adapt the tone to your project, and delete sections you don't need.
 
-Four files ship in this folder:
+Five files ship in this folder:
 
 | File | Purpose | Auto-injected? |
 |---|---|---|
 | `SYSTEM_PREAMBLE.template.md` | Operational scaffolding — how the agent should operate. Render to `SYSTEM_PREAMBLE.md`. | Yes (after rendering). |
 | `COMMUNICATION_STYLE.template.md` | Tone and structure guidance. Render to `COMMUNICATION_STYLE.md`. | Yes (after rendering). |
 | `ENGINE-GUIDE.md` | Concise reference for the star map, attention pool, tools, and tunables. Written for the agent to read on demand. | No — referenced in `SYSTEM_PREAMBLE §7` as an on-demand index entry. |
+| `WORKFLOW-CONTEXT-GATES.example.json` | Optional example registry mapping high-risk workflows to checklist files and preflight/postflight checks. Copy or edit it when your project has repeatable release, migration, deploy, or repository workflows. | No — read on demand via the workflow-context-gate skill. |
 | `SETUP.md` | This file. | No. |
 
 ---

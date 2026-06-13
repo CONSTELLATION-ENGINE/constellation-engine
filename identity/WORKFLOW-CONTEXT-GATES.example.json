@@ -1,0 +1,58 @@
+{
+  "release": {
+    "triggers": ["release", "hotfix", "version bump", "tag", "package", "publish"],
+    "required_context": ["RELEASE-CHECKLIST.md"],
+    "preflight": [
+      "confirm scope from the previous tag",
+      "confirm CHANGELOG.md [Unreleased] covers the batch",
+      "run English-only and sensitive-token audits",
+      "run release checks before packaging"
+    ],
+    "postflight": [
+      "verify uploaded asset names",
+      "verify updater manifests",
+      "update public website download links",
+      "verify public download buttons return HTTP 200"
+    ]
+  },
+  "hotfix": {
+    "triggers": ["bug", "fix", "hardening", "regression"],
+    "required_context": ["CHANGELOG.md", "RELEASE-CHECKLIST.md"],
+    "preflight": [
+      "decide whether the change is OSS-shippable",
+      "keep private data and local-only workflow details out of commits",
+      "update CHANGELOG.md [Unreleased] in the same turn"
+    ],
+    "postflight": [
+      "run focused tests",
+      "run git diff --check",
+      "record skipped checks with exact reasons"
+    ]
+  },
+  "database_migration": {
+    "triggers": ["migration", "schema", "backfill", "repair database"],
+    "required_context": [],
+    "preflight": [
+      "identify every table and index touched",
+      "take or confirm a backup",
+      "write rollback notes before running the migration"
+    ],
+    "postflight": [
+      "verify schema shape",
+      "verify affected read and write paths",
+      "document any one-way data transformations"
+    ]
+  },
+  "website_deploy": {
+    "triggers": ["deploy website", "download links", "landing page"],
+    "required_context": [],
+    "preflight": [
+      "confirm target domain and deploy command",
+      "verify local HTML points at exact release asset names"
+    ],
+    "postflight": [
+      "verify live HTML is not stale",
+      "verify every public download link returns HTTP 200"
+    ]
+  }
+}
