@@ -77,6 +77,49 @@ const TIMELINE_MERGE_MAX_SECTIONS = Number.isFinite(_tmCfg.maxSections) ? _tmCfg
 const TIMELINE_MERGE_MAX_CHARS = Number.isFinite(_tmCfg.maxChars) ? _tmCfg.maxChars : 12000;
 const TIMELINE_MERGE_MIN_GAP_HOURS = Number.isFinite(_tmCfg.minGapHours) ? _tmCfg.minGapHours : 2;
 
+function extractFirstJsonObject(text) {
+  const raw = String(text || '').trim();
+  if (!raw) return null;
+
+  let start = -1;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i];
+    if (start < 0) {
+      if (ch === '{') {
+        start = i;
+        depth = 1;
+      }
+      continue;
+    }
+
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (ch === '\\') {
+      escaped = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+
+    if (ch === '{') depth++;
+    else if (ch === '}') {
+      depth--;
+      if (depth === 0) return raw.slice(start, i + 1);
+    }
+  }
+
+  return null;
+}
+
 // Multi-SA edge whitelist — used by _callConsolidationJudge to validate the judge LLM's EDGE_TYPE output.
 // Source of truth: engine-output/architecture-research/PLAN-MULTI-SA-REACTIVATION.md §4.1
 // 23 types across 3 channels. Hallucinated types are dropped + logged; optional fallback to
@@ -4192,7 +4235,7 @@ ${rawText}`;
             model: LLM_MODEL,
             system: systemPrompt,
             messages: [{ role: 'user', content: user }],
-            temperature: 0.3,
+            temperature: 0.0,
             max_tokens: 1500
           })
         });
@@ -4212,7 +4255,7 @@ ${rawText}`;
               { role: 'system', content: systemPrompt },
               { role: 'user', content: user }
             ],
-            temperature: 0.3,
+            temperature: 0.0,
             max_tokens: 1500
           })
         });
@@ -4230,7 +4273,8 @@ ${rawText}`;
       // Strip <think> blocks if present (Qwen3 thinking)
       content = content.replace(/<think>[\s\S]*?<\/think>\s*/gi, '').trim();
 
-      return JSON.parse(content);
+      const jsonText = extractFirstJsonObject(content) || content;
+      return JSON.parse(jsonText);
     } catch (e) {
       if (noFallback) {
         throw new Error(`LLM envelope generation failed (noFallback): ${e.message}`);
