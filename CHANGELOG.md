@@ -7,13 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.3] - 2026-05-30
-
 ### Fixed
 - **Anamnesis Memory Rescue no longer revives superseded Star Map nodes** (`src/memory-rescue.js`): Star Map rescue candidates now require `superseded_at IS NULL` in addition to active/non-deprecated state, and the judge prompt treats outdated or superseded memories as noise. This keeps the second-pass rescue path aligned with stale-memory suppression instead of letting active-but-superseded nodes re-enter prompts.
 - **Anamnesis Memory Rescue now ships as a gated second-pass recall layer** (`src/agent-runtime.js`, `src/memory-rescue.js`, `src/injection-log.js`, `src/config.js`, `config.example.json`): recall-like turns can now trigger deterministic Star Map / conversation candidate rescue plus a bounded LLM relevance judge. Low-relevance candidates are filtered before prompt injection, trigger logs surface as `[Anamnesis/MemoryRescue] ...`, and extracted log terms separate stable entities from recall-intent phrases so stdout does not treat whole user sentences as keywords.
 - **Release validation scripts are now runnable on fresh OSS checkouts** (`scripts/validate-config.js`, `src/boot-test.js`, `scripts/oss-scrub-rules.json`): restored the missing `npm run validate-config` target, made `npm run boot-test` use an internal placeholder model so provider-neutral first-run configs do not fail before onboarding, and narrowed an outdated scrub assertion that incorrectly required the generic agent guide to contain identity seed wording.
 - **Raw recent context is now compaction recovery only** (`src/agent-runtime.js`, `src/config.js`, `config.example.json`): normal turns no longer inject a large Recent Verbatim Context block or stored compacted Conversation Summary by default. The prompt keeps a small recovery-policy note, and raw verbatim expands only after a compaction-marked recovery window, bounded to 20-40 turns. This reduces duplicated prompt context while preserving exact-turn recovery after compaction.
+
+## [1.0.3] - 2026-05-30
+
+### Fixed
 - **Resolver canary no longer auto-starts on boot** (`src/main.js`, `src/mimir-resolver.js`, `constellation.db`): synthetic `resolver_canary` heartbeat telemetry is now an explicit diagnostic path only. This prevents fake resolver traffic from confusing health panels and avoids any opt-in canary node path from surfacing user-visible `resolver-canary-*` memory noise by default. The sample star map also demotes the existing canary node to `dormant`.
 - **Mímir JS pool now applies query-aware relevance scoring** (`scripts/mimir-js/index.js`, `scripts/mimir-js/pool.js`): `/signal` text KNN results are cached as short-lived query similarities, and `/pool` adds the same gated cosine relevance bonus used by the Python daemon. Query-relevant nodes now rise during first-stage pool scoring instead of relying only on later rerank filtering. Removed stale parity-disclaimer comments that understated the shipped OSS Mímir runtime.
 - **Restart resume handoff now carries progress context** (`src/restart-resume.js`, `src/telegram.js`): restart auto-continuation now uses a shared handoff builder that includes the interrupted turn, tool ledger, persisted tool results, and the most recent assistant progress summaries from the same session. This reduces post-restart loops where the agent sees only the original user message and repeats completed diagnosis instead of continuing from the last visible step.
