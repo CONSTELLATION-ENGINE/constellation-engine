@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-06-13
+
 ### Added
 - **Workflow Context Gate light edition** (`skills/workflow-context-gate/SKILL.md`, `identity/WORKFLOW-CONTEXT-GATES.example.json`, `identity/ENGINE-GUIDE.md`, `identity/SYSTEM_PREAMBLE.md`, `electron/package.json`): added an OSS-safe workflow-context pattern for loading release, hotfix, migration, deploy, repository, or external-action checklists only when a task needs them. The bundled skill and editable registry example expose the operating pattern without shipping any private workflow rules, and packaged apps now include bundled skills under the engine resources directory.
 

@@ -1,7 +1,7 @@
 {
   "name": "constellation-launcher",
   "productName": "Constellation",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Electron launcher for Constellation Engine — single-instance, port-probing, structured-ready, IPC shutdown.",
   "license": "AGPL-3.0-or-later",
   "private": true,
