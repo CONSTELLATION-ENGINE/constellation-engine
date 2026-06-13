@@ -229,6 +229,24 @@ for f in "$STAGING/dist/electron"/*.{exe,AppImage,zip,dmg,deb,rpm,blockmap,yml,y
 done
 shopt -u nullglob
 
+# electron-builder's NSIS artifact may use the product-name template with
+# spaces, while latest.yml uses the hyphenated updater URL. Normalize the copied
+# Windows installer so release assets and updater manifests agree.
+if [[ "$PLATFORM" == "win32" && -n "$APP_VERSION" ]]; then
+  spaced="$OUT_DIR/Constellation Setup $APP_VERSION.exe"
+  hyphen="$OUT_DIR/Constellation-Setup-$APP_VERSION.exe"
+  if [[ -f "$spaced" ]]; then
+    mv -f "$spaced" "$hyphen"
+    echo "    normalized Windows artifact: $(basename "$hyphen")"
+  fi
+  spaced_blockmap="$spaced.blockmap"
+  hyphen_blockmap="$hyphen.blockmap"
+  if [[ -f "$spaced_blockmap" ]]; then
+    mv -f "$spaced_blockmap" "$hyphen_blockmap"
+    echo "    normalized Windows blockmap: $(basename "$hyphen_blockmap")"
+  fi
+fi
+
 echo ""
 echo "==> Build complete. Artifacts:"
 ls -lh "$OUT_DIR" | grep -Ei '\.(exe|appimage|zip|dmg)$' || true
