@@ -981,6 +981,9 @@ Note: the \`slug\` field must be **ASCII kebab-case** (3-5 English words, lowerc
           let nodeId = null;
           if (this.#engine?.rememberRaw) {
             nodeId = this.#generateInboxNodeId(decisionSlug || summary, id);
+            let fullText = summary;
+            let inboxCapturedAt = null;
+            let inboxAutoEdges = [];
             try {
               // Auto-supersedes: detect similar existing node, write anyway + create supersedes edge
               let inboxAutoSupersedesTarget = null;
@@ -1039,8 +1042,6 @@ Note: the \`slug\` field must be **ASCII kebab-case** (3-5 English words, lowerc
               }
 
               // Fetch original inbox content + captured_at for event-time accuracy.
-              let fullText = summary;
-              let inboxCapturedAt = null;
               try {
                 const inboxRow = this.#db.prepare('SELECT content, captured_at FROM inbox WHERE id = ?').get(id);
                 if (inboxRow?.content && inboxRow.content.length > summary.length) {
@@ -1050,7 +1051,7 @@ Note: the \`slug\` field must be **ASCII kebab-case** (3-5 English words, lowerc
                 if (inboxRow?.captured_at) inboxCapturedAt = inboxRow.captured_at;
               } catch { /* fallback to summary only */ }
 
-              const inboxAutoEdges = inboxAutoSupersedesTarget
+              inboxAutoEdges = inboxAutoSupersedesTarget
                 ? [{ target: inboxAutoSupersedesTarget, type: 'supersedes', strength: 1.0 }]
                 : [];
               await this.#engine.rememberRaw(
@@ -1073,9 +1074,38 @@ Note: the \`slug\` field must be **ASCII kebab-case** (3-5 English words, lowerc
                 console.log(`[Anamnesis] Inbox #${id} promoted → star map node ${nodeId}`);
               }
             } catch (err) {
-              console.warn(`[Anamnesis] Inbox #${id} LLM envelope failed, keeping pending for retry: ${err.message}`);
-              // Don't mark as promoted — leave as pending so next Anamnesis cycle retries
-              continue;
+              console.warn(`[Anamnesis] Inbox #${id} LLM envelope failed, using reviewed summary fallback: ${err.message}`);
+              try {
+                const l0 = String(summary || '').split(/\n+/)[0].slice(0, 80) || `Inbox #${id} promoted memory`;
+                const l1 = String(summary || '').slice(0, 500);
+                const l2Parts = [
+                  `Reviewed summary:\n${String(summary || '').trim()}`,
+                  fullText && fullText !== summary ? `\nSource context:\n${fullText}` : '',
+                ].filter(Boolean);
+
+                await this.#engine.remember({
+                  id: nodeId,
+                  l0,
+                  l1,
+                  l2: l2Parts.join('\n').slice(0, 4000),
+                  tags: tags || ['inbox-promoted'],
+                  tone: 'analytical',
+                  valence: 0,
+                  arousal: 0.4,
+                  weight: 0.85,
+                  source: 'inbox-promotion',
+                  edges: inboxAutoEdges,
+                  node_type: decisionNodeType || 'conversation-insight',
+                  event_at: inboxCapturedAt,
+                  subkind: 'anamnesis_summary',
+                });
+                this.#cycleWrittenIds.add(nodeId);
+                console.log(`[Anamnesis] Inbox #${id} promoted via reviewed summary fallback → star map node ${nodeId}`);
+              } catch (fallbackErr) {
+                console.warn(`[Anamnesis] Inbox #${id} fallback promotion failed, keeping pending for retry: ${fallbackErr.message}`);
+                // Don't mark as promoted — leave as pending so next Anamnesis cycle retries.
+                continue;
+              }
             }
           }
 

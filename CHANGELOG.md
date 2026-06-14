@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Anamnesis inbox promotion now has a reviewed-summary fallback** (`src/session-debrief.js`): inbox promotion now falls back to the already-reviewed Anamnesis summary when `rememberRaw(... noFallback: true)` receives an LLM response with no parseable JSON at all. The fallback preserves source context, event time, node type, tags, and supersedes edges, preventing durable inbox items from staying pending forever when the envelope model ignores the JSON contract.
 - **LLM envelope parsing now tolerates prefaced JSON responses** (`engine.cjs`): raw memory ingestion now extracts the first balanced JSON object after stripping markdown fences and `<think>` blocks, and envelope generation uses `temperature: 0.0` for both Anthropic and OpenAI-compatible providers. This prevents Anamnesis or memory-import promotion from getting stuck when a model returns a short natural-language prefix before the JSON envelope.
 
 ## [1.0.4] - 2026-06-13
