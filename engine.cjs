@@ -3784,6 +3784,16 @@ Cosine similarity: ${cosSim.toFixed(3)}`;
 
     const envelope = await this._llmGenerateEnvelope(rawText, existingNodeIds, { noFallback });
     if (!envelope) throw new Error('LLM envelope generation failed');
+    const rawTextStr = String(rawText || '').trim();
+    const normalizedL0 = String(envelope.l0 || '').trim()
+      || rawTextStr.split(/\n+/)[0]?.slice(0, 80)
+      || `Raw memory ${Date.now()}`;
+    const normalizedL1 = String(envelope.l1 || '').trim()
+      || rawTextStr.slice(0, 500)
+      || normalizedL0;
+    const normalizedL2 = String(envelope.l2 || '').trim()
+      || rawTextStr
+      || normalizedL1;
 
     // Use LLM-generated id or auto-generate
     const nodeId = id || envelope.id || `raw-${Date.now()}`;
@@ -3797,9 +3807,9 @@ Cosine similarity: ${cosSim.toFixed(3)}`;
 
     return this.remember({
       id: nodeId,
-      l0: envelope.l0,
-      l1: envelope.l1,
-      l2: envelope.l2,
+      l0: normalizedL0,
+      l1: normalizedL1,
+      l2: normalizedL2,
       tags: mergedTags,
       tone: envelope.tone || 'analytical',
       valence: envelope.valence ?? 0,
