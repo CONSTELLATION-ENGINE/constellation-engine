@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.5] - 2026-06-27
+
 ### Fixed
 - **Anamnesis owner-scoped inbox fetch uses the canonical speaker id** (`src/session-debrief.js`): when `OWNER_USER_ID` is configured, inline inbox review now filters `inbox.user_id` with the normalized `OWNER_SPEAKER_ID` (`tg:<id>`). This keeps multi-user inbox promotion aligned with the stored `user_id` format while preserving legacy `NULL` rows.
 - **Anamnesis inline inbox review no longer promotes raw founder auto-capture fragments** (`src/session-debrief.js`): session debriefs now exclude `source='founder_chat'` / `capture_reason='auto_capture_founder_msg'` rows from their per-run inbox review batch. These wide-net captures are per-turn raw material and can fragment long discussions into many `inbox-*` nodes when promoted inside every debrief; session-level memory should come from the debrief synthesis path, with raw inbox candidates left for slower review or future arc-level aggregation.
