@@ -945,6 +945,10 @@ Note: the \`slug\` field must be **ASCII kebab-case** (3-5 English words, lowerc
       `).run();
 
       // Fetch pending — 15 per batch to clear backlog faster.
+      // Do not inline-promote the wide-net founder auto-capture stream here:
+      // those rows are per-turn raw material and promote as fragments when
+      // reviewed inside every debrief. Keep them pending for slower hygiene or
+      // future arc-level aggregation; Anamnesis L3 should synthesize the session.
       // Scope to this instance's owner so a foreign user's inbox items
       // cannot be promoted into the owner's star map. Legacy rows with
       // user_id IS NULL (pre-migration) are still surfaced to avoid
@@ -953,12 +957,14 @@ Note: the \`slug\` field must be **ASCII kebab-case** (3-5 English words, lowerc
         return this.#db.prepare(`
           SELECT id, content, summary, source, captured_at, capture_reason
           FROM inbox WHERE status = 'pending' AND (user_id = ? OR user_id IS NULL)
+            AND NOT (source = 'founder_chat' AND capture_reason = 'auto_capture_founder_msg')
           ORDER BY captured_at ASC LIMIT 15
         `).all(OWNER_SPEAKER_ID);
       }
       return this.#db.prepare(`
         SELECT id, content, summary, source, captured_at, capture_reason
         FROM inbox WHERE status = 'pending'
+          AND NOT (source = 'founder_chat' AND capture_reason = 'auto_capture_founder_msg')
         ORDER BY captured_at ASC LIMIT 15
       `).all();
     } catch (err) {
